@@ -294,3 +294,4 @@ fn diff_lines(old: &[&str], new: &[&str]) -> Vec<DiffLine> {
 
     result
 }
+

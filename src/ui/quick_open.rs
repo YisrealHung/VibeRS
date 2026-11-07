@@ -179,3 +179,4 @@ pub fn render_quick_open(ctx: &egui::Context, state: &mut AppState) {
         state.quick_open.selected_index = 0;
     }
 }
+
