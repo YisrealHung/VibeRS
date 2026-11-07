@@ -50,14 +50,15 @@ pub fn render_top_bar(ctx: &egui::Context, state: &mut AppState) {
                     },
                 );
 
-                ui.separator();
-
-                ui.label(
-                    RichText::new(&state.workspace_name)
-                        .size(12.5)
-                        .color(Palette::TEXT_MUTED),
-                )
-                .on_hover_text(state.workspace_root.display().to_string());
+                if !state.workspace_name.is_empty() {
+                    ui.separator();
+                    ui.label(
+                        RichText::new(&state.workspace_name)
+                            .size(12.5)
+                            .color(Palette::TEXT_MUTED),
+                    )
+                    .on_hover_text(state.workspace_root.display().to_string());
+                }
             });
         });
 }

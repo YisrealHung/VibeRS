@@ -24,23 +24,35 @@ pub fn render_left_panel(ctx: &egui::Context, state: &mut AppState) {
                 )
                 .show_inside(ui, |ui| {
                     ui.horizontal_centered(|ui| {
+                        let header_title = if state.workspace_name.is_empty() {
+                            "NO FOLDER OPENED".to_string()
+                        } else {
+                            state.workspace_name.to_uppercase()
+                        };
+
                         ui.label(
-                            RichText::new(state.workspace_name.to_uppercase())
+                            RichText::new(header_title)
                                 .size(11.5)
                                 .strong()
                                 .color(Palette::TEXT_MUTED),
                         )
-                        .on_hover_text(state.workspace_root.display().to_string());
+                        .on_hover_text(if state.workspace_root.as_os_str().is_empty() {
+                            "尚未開啟任何專案資料夾".to_string()
+                        } else {
+                            state.workspace_root.display().to_string()
+                        });
 
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            if ui
-                                .small_button(
-                                    RichText::new("↻").size(12.0).color(Palette::TEXT_MUTED),
-                                )
-                                .on_hover_text("重新整理檔案樹")
-                                .clicked()
-                            {
-                                state.refresh_tree();
+                            if !state.workspace_name.is_empty() {
+                                if ui
+                                    .small_button(
+                                        RichText::new("↻").size(12.0).color(Palette::TEXT_MUTED),
+                                    )
+                                    .on_hover_text("重新整理檔案樹")
+                                    .clicked()
+                                {
+                                    state.refresh_tree();
+                                }
                             }
                         });
                     });
@@ -74,6 +86,29 @@ pub fn render_left_panel(ctx: &egui::Context, state: &mut AppState) {
                         }),
                 )
                 .show_inside(ui, |ui| {
+                    if state.workspace_name.is_empty() {
+                        ui.add_space(30.0);
+                        ui.vertical_centered(|ui| {
+                            ui.label(
+                                RichText::new("尚未開啟資料夾")
+                                    .size(12.5)
+                                    .color(Palette::TEXT_DIM),
+                            );
+                            ui.add_space(8.0);
+                            if ui
+                                .button(
+                                    RichText::new("開啟資料夾...")
+                                        .size(12.0)
+                                        .color(Palette::TEXT_PRIMARY),
+                                )
+                                .clicked()
+                            {
+                                state.prompt_open_folder();
+                            }
+                        });
+                        return;
+                    }
+
                     egui::ScrollArea::vertical()
                         .id_salt("explorer_tree_scroll")
                         .auto_shrink([false, false])

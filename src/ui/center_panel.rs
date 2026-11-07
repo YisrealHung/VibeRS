@@ -30,8 +30,13 @@ pub fn render_center_panel(ctx: &egui::Context, state: &mut AppState) {
                     .frame(Frame::NONE.fill(Palette::BG_EDITOR))
                     .show_inside(ui, |ui| {
                         ui.centered_and_justified(|ui| {
+                            let msg = if state.workspace_name.is_empty() {
+                                "尚未開啟資料夾 (點選左上角 File -> 開啟資料夾 或按 Ctrl+O)"
+                            } else {
+                                "從左側點擊檔案開啟分頁，或按 Ctrl+P 快速搜尋檔案"
+                            };
                             ui.label(
-                                RichText::new("從左側點擊檔案開啟分頁，或按 Ctrl+P 快速搜尋檔案")
+                                RichText::new(msg)
                                     .size(13.5)
                                     .color(Palette::TEXT_DIM),
                             );

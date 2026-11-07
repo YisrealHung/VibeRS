@@ -164,12 +164,11 @@ pub struct AppState {
 
 impl Default for AppState {
     fn default() -> Self {
+        // If the user explicitly passed a folder via CLI args, open it; otherwise start clean (None)
         let root = std::env::args_os()
             .nth(1)
             .map(PathBuf::from)
-            .filter(|p| p.is_dir())
-            .or_else(|| std::env::current_dir().ok())
-            .unwrap_or_else(|| PathBuf::from("."));
+            .filter(|p| p.is_dir());
 
         let installed_providers = detect_installed_providers();
         let active_provider = installed_providers
@@ -210,7 +209,12 @@ impl Default for AppState {
             status_text: "Ready".to_string(),
         };
 
-        state.switch_workspace(root);
+        if let Some(r) = root {
+            state.switch_workspace(r);
+        } else {
+            state.status_text = "尚未開啟資料夾，請使用 File -> 開啟資料夾 (Ctrl+O)".to_string();
+        }
+
         state
     }
 }
@@ -277,6 +281,10 @@ impl AppState {
     }
 
     pub fn refresh_tree(&mut self) {
+        if self.workspace_root.as_os_str().is_empty() {
+            self.tree.clear();
+            return;
+        }
         self.tree = scan_directory(&self.workspace_root, &self.workspace_root, 0);
         self.status_text = "已重新整理目錄樹".to_string();
     }

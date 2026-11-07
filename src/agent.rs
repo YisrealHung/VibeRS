@@ -71,7 +71,9 @@ impl AgentTask {
                 }
             };
 
-            cmd.current_dir(&workspace_root);
+            if !workspace_root.as_os_str().is_empty() && workspace_root.is_dir() {
+                cmd.current_dir(&workspace_root);
+            }
             cmd.stdout(Stdio::piped());
             cmd.stderr(Stdio::piped());
 
