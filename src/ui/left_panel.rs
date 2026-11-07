@@ -51,6 +51,13 @@ pub fn render_left_panel(ctx: &egui::Context, state: &mut AppState) {
                 .map(|t| t.rel_path.clone())
                 .unwrap_or_default();
 
+            let modified_files: std::collections::HashSet<String> = state
+                .open_tabs
+                .iter()
+                .filter(|t| t.is_dirty || t.content != t.disk_snapshot)
+                .map(|t| t.rel_path.clone())
+                .collect();
+
             let mut file_to_open: Option<(PathBuf, String)> = None;
             let mut requested_op: Option<FileOpModal> = None;
 
@@ -77,6 +84,7 @@ pub fn render_left_panel(ctx: &egui::Context, state: &mut AppState) {
                                     node,
                                     0,
                                     &active_rel,
+                                    &modified_files,
                                     &mut file_to_open,
                                     &mut requested_op,
                                 );
@@ -101,6 +109,7 @@ fn render_tree_node(
     node: &mut TreeNode,
     depth: usize,
     active_rel: &str,
+    modified_files: &std::collections::HashSet<String>,
     file_to_open: &mut Option<(PathBuf, String)>,
     requested_op: &mut Option<FileOpModal>,
 ) {
@@ -156,21 +165,28 @@ fn render_tree_node(
 
         if node.expanded {
             for child in &mut node.children {
-                render_tree_node(ui, child, depth + 1, active_rel, file_to_open, requested_op);
+                render_tree_node(ui, child, depth + 1, active_rel, modified_files, file_to_open, requested_op);
             }
         }
     } else {
         let is_selected = node.rel_path == active_rel;
+        let is_modified = modified_files.contains(&node.rel_path);
+
         let row_resp = ui.horizontal(|ui| {
             ui.add_space(indent + 14.0);
             let resp = ui.selectable_label(
                 is_selected,
                 RichText::new(&node.name).size(12.5).color(if is_selected {
                     Color32::WHITE
+                } else if is_modified {
+                    Palette::AMBER
                 } else {
                     Palette::TEXT_MUTED
                 }),
             );
+            if is_modified {
+                ui.label(RichText::new("M").size(10.5).color(Palette::AMBER));
+            }
             if resp.clicked() {
                 *file_to_open = Some((node.full_path.clone(), node.rel_path.clone()));
             }

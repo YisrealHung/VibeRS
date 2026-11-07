@@ -1,3 +1,4 @@
+use crate::diff::{accept_hunk_in_snapshot, compute_hunks, revert_hunk_in_text, DiffOpKind};
 use crate::state::AppState;
 use crate::theme::Palette;
 use egui::{
@@ -30,7 +31,7 @@ pub fn render_center_panel(ctx: &egui::Context, state: &mut AppState) {
                     .show_inside(ui, |ui| {
                         ui.centered_and_justified(|ui| {
                             ui.label(
-                                RichText::new("從左側點擊檔案開啟分頁，或按 Ctrl+O 選擇其他資料夾")
+                                RichText::new("從左側點擊檔案開啟分頁，或按 Ctrl+P 快速搜尋檔案")
                                     .size(13.5)
                                     .color(Palette::TEXT_DIM),
                             );
@@ -39,18 +40,23 @@ pub fn render_center_panel(ctx: &egui::Context, state: &mut AppState) {
                 return;
             }
 
-            // 2. Subtle Breadcrumb Bar
+            let mut tab_action_accept_hunk = None;
+            let mut tab_action_revert_hunk = None;
+
+            // 2. Subtle Breadcrumb Bar & Diff Mode Toggle
             egui::TopBottomPanel::top("center_breadcrumb_bar")
-                .exact_height(24.0)
+                .exact_height(28.0)
                 .frame(
                     Frame::NONE
                         .fill(Palette::BG_EDITOR)
                         .inner_margin(Margin::symmetric(14, 0)),
                 )
                 .show_inside(ui, |ui| {
-                    if let Some(tab) = state.active_tab() {
+                    if let Some(tab) = state.active_tab_mut() {
                         let breadcrumb = tab.rel_path.replace('/', "  ›  ");
                         let is_dirty = tab.is_dirty;
+                        let has_diff = tab.content != tab.disk_snapshot;
+
                         ui.horizontal_centered(|ui| {
                             ui.label(
                                 RichText::new(breadcrumb)
@@ -64,11 +70,31 @@ pub fn render_center_panel(ctx: &egui::Context, state: &mut AppState) {
                                         .color(Palette::AMBER),
                                 );
                             }
+
+                            // Right-aligned Diff Toggle
+                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                if has_diff {
+                                    let diff_label = if tab.show_diff { "Code 模式" } else { "⚡ Diff 模式" };
+                                    if ui
+                                        .selectable_label(
+                                            tab.show_diff,
+                                            RichText::new(diff_label)
+                                                .size(11.5)
+                                                .color(if tab.show_diff { Palette::ACCENT } else { Palette::AMBER }),
+                                        )
+                                        .clicked()
+                                    {
+                                        tab.show_diff = !tab.show_diff;
+                                    }
+                                }
+                            });
                         });
                     }
                 });
 
-            // 3. Code Editor Area (6px right margin keeps scrollbar clear of right panel's resize handle)
+            // 3. Code Editor Area or Inline Diff Area
+            let is_showing_diff = state.active_tab().map(|t| t.show_diff).unwrap_or(false);
+
             egui::CentralPanel::default()
                 .frame(
                     Frame::NONE
@@ -81,59 +107,209 @@ pub fn render_center_panel(ctx: &egui::Context, state: &mut AppState) {
                         }),
                 )
                 .show_inside(ui, |ui| {
-                    egui::ScrollArea::vertical()
-                        .id_salt("center_code_editor_scroll")
-                        .auto_shrink([false, false])
-                        .show(ui, |ui| {
-                            let code_width = (ui.available_width() - 68.0).max(120.0);
-
-                            if let Some(tab) = state.active_tab_mut() {
-                                let line_count = tab.content.lines().count().max(1);
-                                let mut line_nums = String::with_capacity(line_count * 5);
-                                for i in 1..=line_count {
-                                    if i > 1 {
-                                        line_nums.push('\n');
-                                    }
-                                    line_nums.push_str(&format!("{i:>4}"));
-                                }
-
-                                ui.horizontal_top(|ui| {
-                                    ui.add_space(6.0);
-                                    ui.add(
-                                        egui::Label::new(
-                                            RichText::new(line_nums)
-                                                .font(FontId::monospace(13.0))
-                                                .color(Palette::TEXT_DIM),
-                                        )
-                                        .selectable(false),
-                                    );
-
-                                    ui.add_space(8.0);
-
-                                    let is_rust = tab.name.ends_with(".rs");
-                                    let mut layouter =
-                                        |ui: &egui::Ui, string: &str, _wrap_width: f32| {
-                                            let job = highlight_code(string, is_rust);
-                                            ui.fonts(|f| f.layout_job(job))
-                                        };
-
-                                    let resp = ui.add(
-                                        egui::TextEdit::multiline(&mut tab.content)
-                                            .font(FontId::monospace(13.0))
-                                            .frame(false)
-                                            .code_editor()
-                                            .desired_width(code_width)
-                                            .desired_rows(32)
-                                            .layouter(&mut layouter),
-                                    );
-
-                                    if resp.changed() {
-                                        tab.is_dirty = true;
-                                    }
-                                });
-                            }
-                        });
+                    if is_showing_diff {
+                        render_inline_diff_view(ui, state, &mut tab_action_accept_hunk, &mut tab_action_revert_hunk);
+                    } else {
+                        render_code_editor_view(ui, state);
+                    }
                 });
+
+            // Handle hunk actions
+            if let Some(hunk_id) = tab_action_accept_hunk {
+                if let Some(tab) = state.active_tab_mut() {
+                    tab.disk_snapshot = accept_hunk_in_snapshot(&tab.disk_snapshot, &tab.content, hunk_id);
+                    let _ = std::fs::write(&tab.full_path, &tab.content);
+                    if tab.disk_snapshot == tab.content {
+                        tab.is_dirty = false;
+                        tab.show_diff = false;
+                    }
+                    state.status_text = format!("✓ 已接受 Hunk #{hunk_id} 並存檔");
+                }
+            }
+            if let Some(hunk_id) = tab_action_revert_hunk {
+                if let Some(tab) = state.active_tab_mut() {
+                    tab.content = revert_hunk_in_text(&tab.disk_snapshot, &tab.content, hunk_id);
+                    let _ = std::fs::write(&tab.full_path, &tab.content);
+                    if tab.disk_snapshot == tab.content {
+                        tab.is_dirty = false;
+                        tab.show_diff = false;
+                    }
+                    state.status_text = format!("✗ 已還原 Hunk #{hunk_id} 至快照");
+                }
+            }
+        });
+}
+
+fn render_code_editor_view(ui: &mut egui::Ui, state: &mut AppState) {
+    egui::ScrollArea::vertical()
+        .id_salt("center_code_editor_scroll")
+        .auto_shrink([false, false])
+        .show(ui, |ui| {
+            let code_width = (ui.available_width() - 68.0).max(120.0);
+
+            if let Some(tab) = state.active_tab_mut() {
+                let line_count = tab.content.lines().count().max(1);
+                let mut line_nums = String::with_capacity(line_count * 5);
+                for i in 1..=line_count {
+                    if i > 1 {
+                        line_nums.push('\n');
+                    }
+                    line_nums.push_str(&format!("{i:>4}"));
+                }
+
+                ui.horizontal_top(|ui| {
+                    ui.add_space(6.0);
+                    ui.add(
+                        egui::Label::new(
+                            RichText::new(line_nums)
+                                .font(FontId::monospace(13.0))
+                                .color(Palette::TEXT_DIM),
+                        )
+                        .selectable(false),
+                    );
+
+                    ui.add_space(8.0);
+
+                    let is_rust = tab.name.ends_with(".rs");
+                    let mut layouter =
+                        |ui: &egui::Ui, string: &str, _wrap_width: f32| {
+                            let job = highlight_code(string, is_rust);
+                            ui.fonts(|f| f.layout_job(job))
+                        };
+
+                    let resp = ui.add(
+                        egui::TextEdit::multiline(&mut tab.content)
+                            .font(FontId::monospace(13.0))
+                            .frame(false)
+                            .code_editor()
+                            .desired_width(code_width)
+                            .desired_rows(32)
+                            .layouter(&mut layouter),
+                    );
+
+                    if resp.changed() {
+                        tab.is_dirty = true;
+                    }
+                });
+            }
+        });
+}
+
+fn render_inline_diff_view(
+    ui: &mut egui::Ui,
+    state: &AppState,
+    tab_action_accept: &mut Option<usize>,
+    tab_action_revert: &mut Option<usize>,
+) {
+    let Some(tab) = state.active_tab() else {
+        return;
+    };
+
+    let hunks = compute_hunks(&tab.disk_snapshot, &tab.content);
+
+    if hunks.is_empty() {
+        ui.centered_and_justified(|ui| {
+            ui.label(
+                RichText::new("✨ 目前與磁碟快照完全相同 (無差異)")
+                    .size(13.0)
+                    .color(Palette::GREEN),
+            );
+        });
+        return;
+    }
+
+    egui::ScrollArea::vertical()
+        .id_salt("center_inline_diff_scroll")
+        .auto_shrink([false, false])
+        .show(ui, |ui| {
+            for hunk in &hunks {
+                Frame::NONE
+                    .fill(Palette::BG_SIDEBAR)
+                    .stroke(Stroke::new(1.0, Palette::BORDER))
+                    .corner_radius(CornerRadius::same(5))
+                    .inner_margin(Margin::ZERO)
+                    .show(ui, |ui| {
+                        // Hunk header bar
+                        Frame::NONE
+                            .fill(Palette::BG_INPUT)
+                            .inner_margin(Margin::symmetric(10, 5))
+                            .show(ui, |ui| {
+                                ui.horizontal(|ui| {
+                                    ui.label(
+                                        RichText::new(format!(
+                                            "Hunk #{}  @@ -{},{} +{},{} @@",
+                                            hunk.id, hunk.old_start, hunk.old_count, hunk.new_start, hunk.new_count
+                                        ))
+                                        .monospace()
+                                        .size(11.5)
+                                        .color(Palette::TEXT_MUTED),
+                                    );
+
+                                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                        if ui
+                                            .button(RichText::new("✗ Revert").size(11.5).color(Color32::from_rgb(240, 100, 100)))
+                                            .clicked()
+                                        {
+                                            *tab_action_revert = Some(hunk.id);
+                                        }
+
+                                        if ui
+                                            .button(RichText::new("✓ Accept").size(11.5).color(Palette::GREEN))
+                                            .clicked()
+                                        {
+                                            *tab_action_accept = Some(hunk.id);
+                                        }
+                                    });
+                                });
+                            });
+
+                        // Lines table
+                        Frame::NONE
+                            .inner_margin(Margin::symmetric(6, 4))
+                            .show(ui, |ui| {
+                                for line in &hunk.lines {
+                                    let (bg, prefix, text_color) = match line.kind {
+                                        DiffOpKind::Equal => (Color32::TRANSPARENT, " ", Palette::TEXT_PRIMARY),
+                                        DiffOpKind::Delete => (
+                                            Color32::from_rgba_premultiplied(70, 25, 30, 160),
+                                            "-",
+                                            Color32::from_rgb(250, 150, 160),
+                                        ),
+                                        DiffOpKind::Insert => (
+                                            Color32::from_rgba_premultiplied(25, 65, 35, 160),
+                                            "+",
+                                            Color32::from_rgb(150, 235, 160),
+                                        ),
+                                    };
+
+                                    Frame::NONE
+                                        .fill(bg)
+                                        .inner_margin(Margin::symmetric(6, 1))
+                                        .show(ui, |ui| {
+                                            ui.horizontal(|ui| {
+                                                let old_no = line.old_line.map(|n| format!("{n:>3}")).unwrap_or_else(|| "   ".into());
+                                                let new_no = line.new_line.map(|n| format!("{n:>3}")).unwrap_or_else(|| "   ".into());
+
+                                                ui.label(
+                                                    RichText::new(format!("{old_no} {new_no} {prefix}"))
+                                                        .monospace()
+                                                        .size(12.0)
+                                                        .color(Palette::TEXT_DIM),
+                                                );
+
+                                                ui.label(
+                                                    RichText::new(&line.text)
+                                                        .monospace()
+                                                        .size(12.5)
+                                                        .color(text_color),
+                                                );
+                                            });
+                                        });
+                                }
+                            });
+                    });
+                ui.add_space(8.0);
+            }
         });
 }
 
@@ -200,7 +376,7 @@ fn render_tab_bar(ui: &mut egui::Ui, state: &mut AppState) {
                                 tab_to_close = Some(idx);
                             }
 
-                            if tab.is_dirty {
+                            if tab.is_dirty || tab.content != tab.disk_snapshot {
                                 ui.label(RichText::new("●").size(9.0).color(Palette::AMBER));
                             }
 

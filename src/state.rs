@@ -18,7 +18,9 @@ pub struct OpenTab {
     pub rel_path: String,
     pub full_path: PathBuf,
     pub content: String,
+    pub disk_snapshot: String,
     pub is_dirty: bool,
+    pub show_diff: bool,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -256,8 +258,10 @@ impl AppState {
             name,
             rel_path: normalized_rel.clone(),
             full_path: full_path.to_path_buf(),
-            content,
+            content: content.clone(),
+            disk_snapshot: content,
             is_dirty: false,
+            show_diff: false,
         });
         self.active_tab_idx = self.open_tabs.len() - 1;
         self.status_text = format!("開啟 {}", normalized_rel);
@@ -290,6 +294,7 @@ impl AppState {
     pub fn save_active_tab(&mut self) {
         if let Some(tab) = self.open_tabs.get_mut(self.active_tab_idx) {
             if std::fs::write(&tab.full_path, &tab.content).is_ok() {
+                tab.disk_snapshot = tab.content.clone();
                 tab.is_dirty = false;
                 self.status_text = format!("已儲存 {}", tab.rel_path);
             } else {
@@ -303,6 +308,7 @@ impl AppState {
         for tab in &mut self.open_tabs {
             if tab.is_dirty {
                 if std::fs::write(&tab.full_path, &tab.content).is_ok() {
+                    tab.disk_snapshot = tab.content.clone();
                     tab.is_dirty = false;
                     count += 1;
                 }
