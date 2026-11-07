@@ -152,16 +152,32 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                                 ui.with_layout(
                                     egui::Layout::right_to_left(egui::Align::Center),
                                     |ui| {
-                                        if ui
-                                            .button(
-                                                RichText::new("Send ↵")
-                                                    .size(11.5)
-                                                    .color(Color32::WHITE),
-                                            )
-                                            .clicked()
-                                            || send_shortcut
-                                        {
-                                            state.send_prompt();
+                                        let is_busy = state.active_agent_task.is_some();
+                                        if is_busy {
+                                            if ui
+                                                .button(
+                                                    RichText::new("Stop ⏹")
+                                                        .size(11.5)
+                                                        .color(Color32::from_rgb(250, 140, 140)),
+                                                )
+                                                .clicked()
+                                            {
+                                                if let Some(task) = state.active_agent_task.take() {
+                                                    task.abort();
+                                                }
+                                            }
+                                        } else {
+                                            if ui
+                                                .button(
+                                                    RichText::new("Send ↵")
+                                                        .size(11.5)
+                                                        .color(Color32::WHITE),
+                                                )
+                                                .clicked()
+                                                || send_shortcut
+                                            {
+                                                state.send_prompt();
+                                            }
                                         }
                                     },
                                 );

@@ -1,3 +1,4 @@
+use crate::agent::AgentTask;
 use crate::dialog::{pick_folder_dialog, spawn_new_window};
 use crate::memory::MemoryMonitor;
 use std::path::{Path, PathBuf};
@@ -113,6 +114,7 @@ pub struct AppState {
     pub prompt_input: String,
     pub claude_messages: Vec<ChatMessage>,
     pub gemini_messages: Vec<ChatMessage>,
+    pub active_agent_task: Option<AgentTask>,
 
     // System & Telemetry
     pub memory_monitor: MemoryMonitor,
@@ -162,6 +164,7 @@ impl Default for AppState {
                 model_label: default_gemini_model.to_string(),
                 content: "Gemini (Antigravity) 已就緒。".to_string(),
             }],
+            active_agent_task: None,
             memory_monitor: MemoryMonitor::default(),
             last_disk_check: std::time::Instant::now(),
             status_text: "Ready".to_string(),
@@ -395,7 +398,7 @@ impl AppState {
         };
 
         let user_msg = format!("{context_prefix}{text}");
-        let model_label = self.current_model().to_string();
+        let model_label = self.current_model();
 
         let list = match self.active_provider {
             AiProvider::Claude => &mut self.claude_messages,
@@ -404,15 +407,25 @@ impl AppState {
 
         list.push(ChatMessage {
             role: ChatRole::User,
-            model_label: model_label.clone(),
-            content: user_msg,
+            model_label: model_label.to_string(),
+            content: user_msg.clone(),
         });
 
+        // Placeholder for streaming assistant response
         list.push(ChatMessage {
             role: ChatRole::Assistant,
-            model_label: model_label.clone(),
-            content: format!("[{model_label}] 收到請求，正在分析處理中..."),
+            model_label: model_label.to_string(),
+            content: String::new(),
         });
+
+        // Spawn background task
+        let task = AgentTask::spawn(
+            self.active_provider,
+            model_label,
+            self.workspace_root.clone(),
+            user_msg,
+        );
+        self.active_agent_task = Some(task);
     }
 }
 

@@ -44,6 +44,42 @@ impl eframe::App for VibeApp {
             self.state.check_external_disk_changes();
         }
 
+        // Drain active agent task events
+        if let Some(task) = &self.state.active_agent_task {
+            let mut finished = false;
+            let mut chunks = Vec::new();
+            let mut error = None;
+
+            while let Ok(event) = task.rx.try_recv() {
+                match event {
+                    crate::agent::AgentEvent::Chunk(text) => chunks.push(text),
+                    crate::agent::AgentEvent::Finished => finished = true,
+                    crate::agent::AgentEvent::Error(err) => error = Some(err),
+                }
+            }
+
+            let list = match self.state.active_provider {
+                crate::state::AiProvider::Claude => &mut self.state.claude_messages,
+                crate::state::AiProvider::Gemini => &mut self.state.gemini_messages,
+            };
+
+            if let Some(last) = list.last_mut() {
+                for c in chunks {
+                    last.content.push_str(&c);
+                }
+                if let Some(err) = error {
+                    last.content.push_str(&format!("\n[錯誤: {err}]"));
+                    finished = true;
+                }
+            }
+
+            if finished {
+                self.state.active_agent_task = None;
+            } else {
+                ctx.request_repaint();
+            }
+        }
+
         // Ctrl+P for Quick Open
         if ctx.input(|i| (i.modifiers.ctrl || i.modifiers.command) && !i.modifiers.shift && i.key_pressed(egui::Key::P)) {
             self.state.quick_open.is_open = true;
