@@ -233,19 +233,44 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                                     }
                                     ChatRole::Assistant => {
                                         ui.add_space(2.0);
-                                        ui.label(
-                                            RichText::new(&msg.model_label)
-                                                .size(10.5)
-                                                .color(Palette::TEXT_DIM),
-                                        );
-                                        ui.add(
-                                            egui::Label::new(
-                                                RichText::new(&msg.content)
-                                                    .size(12.5)
-                                                    .color(Palette::TEXT_MUTED),
-                                            )
-                                            .wrap(),
-                                        );
+                                        ui.horizontal(|ui| {
+                                            ui.label(
+                                                RichText::new(&msg.model_label)
+                                                    .size(10.5)
+                                                    .color(Palette::TEXT_DIM),
+                                            );
+                                            if state.active_agent_task.is_some() && msg.content.is_empty() {
+                                                ui.label(
+                                                    RichText::new("⚡ 正在思考並分析專案中...")
+                                                        .size(10.5)
+                                                        .color(Palette::ACCENT),
+                                                );
+                                            }
+                                        });
+
+                                        if msg.content.is_empty() && state.active_agent_task.is_some() {
+                                            ui.add_space(4.0);
+                                            Frame::NONE
+                                                .fill(Palette::BG_INPUT.gamma_multiply(0.5))
+                                                .corner_radius(CornerRadius::same(4))
+                                                .inner_margin(Margin::symmetric(8, 6))
+                                                .show(ui, |ui| {
+                                                    ui.label(
+                                                        RichText::new("正在讀取專案上下文並呼叫 Antigravity 模型，請稍候...")
+                                                            .size(11.5)
+                                                            .color(Palette::TEXT_MUTED),
+                                                    );
+                                                });
+                                        } else {
+                                            ui.add(
+                                                egui::Label::new(
+                                                    RichText::new(&msg.content)
+                                                        .size(12.5)
+                                                        .color(Palette::TEXT_MUTED),
+                                                )
+                                                .wrap(),
+                                            );
+                                        }
                                     }
                                 }
                                 ui.add_space(8.0);

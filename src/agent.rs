@@ -40,12 +40,27 @@ impl AgentTask {
                     };
 
                     let mut c = Command::new(exe);
-                    c.args(["-p", &prompt, "--model", model_id]);
+                    // Add --dangerously-skip-permissions for headless print mode so tool operations (like reading project files) won't be blocked!
+                    c.args([
+                        "-p",
+                        &prompt,
+                        "--model",
+                        model_id,
+                        "--dangerously-skip-permissions",
+                    ]);
                     c
                 }
                 AiProvider::Claude => {
                     let mut c = Command::new("cmd");
-                    c.args(["/C", "claude", "-p", &prompt, "--model", model_id]);
+                    c.args([
+                        "/C",
+                        "claude",
+                        "-p",
+                        &prompt,
+                        "--model",
+                        model_id,
+                        "--dangerously-skip-permissions",
+                    ]);
                     c
                 }
             };
@@ -56,6 +71,9 @@ impl AgentTask {
 
             match cmd.spawn() {
                 Ok(mut child) => {
+                    let mut output_received = false;
+
+                    // Read stdout streaming
                     if let Some(stdout) = child.stdout.take() {
                         let reader = BufReader::new(stdout);
                         for line in reader.lines().map_while(Result::ok) {
@@ -63,13 +81,15 @@ impl AgentTask {
                                 let _ = child.kill();
                                 break;
                             }
+                            output_received = true;
                             let _ = tx.send(AgentEvent::Chunk(format!("{line}\n")));
                         }
                     }
 
+                    // Check stderr if no output or process failed
                     let status = child.wait();
                     if let Ok(exit) = status {
-                        if !exit.success() && running_clone.load(Ordering::SeqCst) {
+                        if !exit.success() || !output_received {
                             if let Some(stderr) = child.stderr.take() {
                                 let reader = BufReader::new(stderr);
                                 let err_text: String = reader
@@ -85,6 +105,7 @@ impl AgentTask {
                             }
                         }
                     }
+
                     let _ = tx.send(AgentEvent::Finished);
                     running_clone.store(false, Ordering::SeqCst);
                 }
