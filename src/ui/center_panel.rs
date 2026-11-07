@@ -2,7 +2,7 @@ use crate::diff::{accept_hunk_in_snapshot, compute_hunks, revert_hunk_in_text, D
 use crate::state::AppState;
 use crate::theme::Palette;
 use egui::{
-    text::LayoutJob, Color32, CornerRadius, FontId, Frame, Margin, RichText, Stroke, TextFormat,
+    Color32, CornerRadius, FontId, Frame, Margin, RichText, Stroke,
 };
 
 pub fn render_center_panel(ctx: &egui::Context, state: &mut AppState) {
@@ -170,10 +170,10 @@ fn render_code_editor_view(ui: &mut egui::Ui, state: &mut AppState) {
 
                     ui.add_space(8.0);
 
-                    let is_rust = tab.name.ends_with(".rs");
+                    let lang = crate::ui::syntax::Language::from_file_name(&tab.name);
                     let mut layouter =
                         |ui: &egui::Ui, string: &str, _wrap_width: f32| {
-                            let job = highlight_code(string, is_rust);
+                            let job = crate::ui::syntax::highlight_code(string, lang);
                             ui.fonts(|f| f.layout_job(job))
                         };
 
@@ -409,125 +409,4 @@ fn render_tab_bar(ui: &mut egui::Ui, state: &mut AppState) {
                 }
             });
         });
-}
-
-fn highlight_code(text: &str, is_rust: bool) -> LayoutJob {
-    let mut job = LayoutJob::default();
-    let font_id = FontId::monospace(13.0);
-
-    if !is_rust {
-        job.append(
-            text,
-            0.0,
-            TextFormat {
-                font_id,
-                color: Palette::TEXT_PRIMARY,
-                ..Default::default()
-            },
-        );
-        return job;
-    }
-
-    const KEYWORDS: &[&str] = &[
-        "fn", "pub", "mod", "use", "let", "mut", "struct", "enum", "impl", "for", "in", "if",
-        "else", "match", "return", "self", "Self", "super", "crate", "const", "static", "where",
-        "trait", "type", "async", "await", "move", "ref", "true", "false", "unsafe", "extern",
-    ];
-
-    for (line_idx, line) in text.split('\n').enumerate() {
-        if line_idx > 0 {
-            job.append(
-                "\n",
-                0.0,
-                TextFormat {
-                    font_id: font_id.clone(),
-                    color: Palette::TEXT_PRIMARY,
-                    ..Default::default()
-                },
-            );
-        }
-
-        let trimmed = line.trim_start();
-        if trimmed.starts_with("//") {
-            job.append(
-                line,
-                0.0,
-                TextFormat {
-                    font_id: font_id.clone(),
-                    color: Palette::SYN_COMMENT,
-                    ..Default::default()
-                },
-            );
-            continue;
-        }
-
-        let mut chars = line.char_indices().peekable();
-        while let Some(&(start, ch)) = chars.peek() {
-            if ch == '"' {
-                chars.next();
-                let mut end = line.len();
-                let mut escaped = false;
-                for (i, c) in chars.by_ref() {
-                    if escaped {
-                        escaped = false;
-                    } else if c == '\\' {
-                        escaped = true;
-                    } else if c == '"' {
-                        end = i + 1;
-                        break;
-                    }
-                }
-                job.append(
-                    &line[start..end],
-                    0.0,
-                    TextFormat {
-                        font_id: font_id.clone(),
-                        color: Palette::SYN_STRING,
-                        ..Default::default()
-                    },
-                );
-            } else if ch.is_alphabetic() || ch == '_' {
-                let mut end = line.len();
-                while let Some(&(i, c)) = chars.peek() {
-                    if c.is_alphanumeric() || c == '_' {
-                        chars.next();
-                    } else {
-                        end = i;
-                        break;
-                    }
-                }
-                let word = &line[start..end];
-                let color = if KEYWORDS.contains(&word) {
-                    Palette::SYN_KEYWORD
-                } else if word.chars().next().is_some_and(|c| c.is_uppercase()) {
-                    Palette::SYN_TYPE
-                } else {
-                    Palette::TEXT_PRIMARY
-                };
-                job.append(
-                    word,
-                    0.0,
-                    TextFormat {
-                        font_id: font_id.clone(),
-                        color,
-                        ..Default::default()
-                    },
-                );
-            } else {
-                chars.next();
-                let next_pos = chars.peek().map(|&(i, _)| i).unwrap_or(line.len());
-                job.append(
-                    &line[start..next_pos],
-                    0.0,
-                    TextFormat {
-                        font_id: font_id.clone(),
-                        color: Palette::TEXT_PRIMARY,
-                        ..Default::default()
-                    },
-                );
-            }
-        }
-    }
-
-    job
 }

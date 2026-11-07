@@ -7,6 +7,13 @@ use std::sync::mpsc::{self, Receiver};
 use std::sync::Arc;
 use std::thread;
 
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
+// Windows CREATE_NO_WINDOW flag to prevent popping up console/terminal window
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
 pub enum AgentEvent {
     Chunk(String),
     Finished,
@@ -40,7 +47,6 @@ impl AgentTask {
                     };
 
                     let mut c = Command::new(exe);
-                    // Add --dangerously-skip-permissions for headless print mode so tool operations (like reading project files) won't be blocked!
                     c.args([
                         "-p",
                         &prompt,
@@ -69,11 +75,14 @@ impl AgentTask {
             cmd.stdout(Stdio::piped());
             cmd.stderr(Stdio::piped());
 
+            // Completely hide console window on Windows
+            #[cfg(windows)]
+            cmd.creation_flags(CREATE_NO_WINDOW);
+
             match cmd.spawn() {
                 Ok(mut child) => {
                     let mut output_received = false;
 
-                    // Read stdout streaming
                     if let Some(stdout) = child.stdout.take() {
                         let reader = BufReader::new(stdout);
                         for line in reader.lines().map_while(Result::ok) {
@@ -86,7 +95,6 @@ impl AgentTask {
                         }
                     }
 
-                    // Check stderr if no output or process failed
                     let status = child.wait();
                     if let Ok(exit) = status {
                         if !exit.success() || !output_received {

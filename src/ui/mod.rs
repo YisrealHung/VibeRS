@@ -1,8 +1,10 @@
 pub mod bottom_bar;
 pub mod center_panel;
 pub mod left_panel;
+pub mod markdown;
 pub mod quick_open;
 pub mod right_panel;
+pub mod syntax;
 pub mod top_bar;
 
 use crate::memory::trim_working_set;

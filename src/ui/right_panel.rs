@@ -262,14 +262,7 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                                                     );
                                                 });
                                         } else {
-                                            ui.add(
-                                                egui::Label::new(
-                                                    RichText::new(&msg.content)
-                                                        .size(12.5)
-                                                        .color(Palette::TEXT_MUTED),
-                                                )
-                                                .wrap(),
-                                            );
+                                            crate::ui::markdown::render_markdown_message(ui, &msg.content);
                                         }
                                     }
                                 }
