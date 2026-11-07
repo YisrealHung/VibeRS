@@ -21,6 +21,7 @@ pub struct OpenTab {
     pub disk_snapshot: String,
     pub is_dirty: bool,
     pub show_diff: bool,
+    pub last_disk_modified: Option<std::time::SystemTime>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -115,6 +116,7 @@ pub struct AppState {
 
     // System & Telemetry
     pub memory_monitor: MemoryMonitor,
+    pub last_disk_check: std::time::Instant,
     pub status_text: String,
 }
 
@@ -161,6 +163,7 @@ impl Default for AppState {
                 content: "Gemini (Antigravity) 已就緒。".to_string(),
             }],
             memory_monitor: MemoryMonitor::default(),
+            last_disk_check: std::time::Instant::now(),
             status_text: "Ready".to_string(),
         };
 
@@ -235,6 +238,44 @@ impl AppState {
         self.status_text = "已重新整理目錄樹".to_string();
     }
 
+    pub fn check_external_disk_changes(&mut self) {
+        if self.last_disk_check.elapsed() < std::time::Duration::from_millis(1500) {
+            return;
+        }
+        self.last_disk_check = std::time::Instant::now();
+
+        let mut changes_found = false;
+        for tab in &mut self.open_tabs {
+            if let Ok(metadata) = tab.full_path.metadata() {
+                if let Ok(disk_mtime) = metadata.modified() {
+                    if let Some(prev_mtime) = tab.last_disk_modified {
+                        if disk_mtime > prev_mtime {
+                            tab.last_disk_modified = Some(disk_mtime);
+                            if let Ok(new_disk_content) = std::fs::read_to_string(&tab.full_path) {
+                                if new_disk_content != tab.content {
+                                    // External change detected:
+                                    // Keep current content as snapshot, update tab.content to new external code,
+                                    // and enable diff mode automatically for review.
+                                    tab.disk_snapshot = tab.content.clone();
+                                    tab.content = new_disk_content;
+                                    tab.show_diff = true;
+                                    tab.is_dirty = false;
+                                    changes_found = true;
+                                }
+                            }
+                        }
+                    } else {
+                        tab.last_disk_modified = Some(disk_mtime);
+                    }
+                }
+            }
+        }
+
+        if changes_found {
+            self.status_text = "⚡ 偵測到外部檔案變更，已自動載入並切換至 Diff 模式".to_string();
+        }
+    }
+
     pub fn open_file_tab(&mut self, full_path: &Path, rel_path: &str) {
         let normalized_rel = rel_path.replace('\\', "/");
         if let Some(existing_idx) = self
@@ -254,6 +295,8 @@ impl AppState {
             .unwrap_or(&normalized_rel)
             .to_string();
 
+        let last_disk_modified = full_path.metadata().and_then(|m| m.modified()).ok();
+
         self.open_tabs.push(OpenTab {
             name,
             rel_path: normalized_rel.clone(),
@@ -262,6 +305,7 @@ impl AppState {
             disk_snapshot: content,
             is_dirty: false,
             show_diff: false,
+            last_disk_modified,
         });
         self.active_tab_idx = self.open_tabs.len() - 1;
         self.status_text = format!("開啟 {}", normalized_rel);
@@ -295,6 +339,7 @@ impl AppState {
         if let Some(tab) = self.open_tabs.get_mut(self.active_tab_idx) {
             if std::fs::write(&tab.full_path, &tab.content).is_ok() {
                 tab.disk_snapshot = tab.content.clone();
+                tab.last_disk_modified = tab.full_path.metadata().and_then(|m| m.modified()).ok();
                 tab.is_dirty = false;
                 self.status_text = format!("已儲存 {}", tab.rel_path);
             } else {
@@ -309,6 +354,7 @@ impl AppState {
             if tab.is_dirty {
                 if std::fs::write(&tab.full_path, &tab.content).is_ok() {
                     tab.disk_snapshot = tab.content.clone();
+                    tab.last_disk_modified = tab.full_path.metadata().and_then(|m| m.modified()).ok();
                     tab.is_dirty = false;
                     count += 1;
                 }

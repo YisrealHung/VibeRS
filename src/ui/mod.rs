@@ -41,6 +41,7 @@ impl eframe::App for VibeApp {
             }
         } else {
             self.state.memory_monitor.update_if_needed();
+            self.state.check_external_disk_changes();
         }
 
         // Ctrl+P for Quick Open
