@@ -1,0 +1,438 @@
+use crate::dialog::{pick_folder_dialog, spawn_new_window};
+use crate::memory::MemoryMonitor;
+use std::path::{Path, PathBuf};
+
+#[derive(Clone, Debug)]
+pub struct TreeNode {
+    pub name: String,
+    pub rel_path: String,
+    pub full_path: PathBuf,
+    pub is_dir: bool,
+    pub expanded: bool,
+    pub children: Vec<TreeNode>,
+}
+
+#[derive(Clone, Debug)]
+pub struct OpenTab {
+    pub name: String,
+    pub rel_path: String,
+    pub full_path: PathBuf,
+    pub content: String,
+    pub is_dirty: bool,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum AiProvider {
+    Claude,
+    Gemini,
+}
+
+impl AiProvider {
+    pub fn tab_title(self) -> &'static str {
+        match self {
+            AiProvider::Claude => "Claude",
+            AiProvider::Gemini => "Gemini",
+        }
+    }
+
+    pub fn models(self) -> &'static [&'static str] {
+        match self {
+            // Claude Code Desktop models
+            AiProvider::Claude => &[
+                "Claude Sonnet 4.5",
+                "Claude Opus 4.5",
+                "Claude Haiku 4.5",
+                "Claude 3.7 Sonnet",
+            ],
+            // Antigravity IDE Gemini models
+            AiProvider::Gemini => &[
+                "Gemini 3.1 Pro (High)",
+                "Gemini 3.1 Pro (Low)",
+                "Gemini 3 Flash",
+                "Gemini 2.5 Pro",
+                "Gemini 2.5 Flash",
+            ],
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ChatRole {
+    User,
+    Assistant,
+}
+
+#[derive(Clone, Debug)]
+pub struct ChatMessage {
+    pub role: ChatRole,
+    pub model_label: String,
+    pub content: String,
+}
+
+pub struct AppState {
+    pub workspace_root: PathBuf,
+    pub workspace_name: String,
+    pub tree: Vec<TreeNode>,
+
+    // Editor Tabs
+    pub open_tabs: Vec<OpenTab>,
+    pub active_tab_idx: usize,
+
+    // Right AI Panel (auto-detected installed providers)
+    pub installed_providers: Vec<AiProvider>,
+    pub active_provider: AiProvider,
+    pub selected_claude_model: &'static str,
+    pub selected_gemini_model: &'static str,
+    pub attach_active_file: bool,
+    pub prompt_input: String,
+    pub claude_messages: Vec<ChatMessage>,
+    pub gemini_messages: Vec<ChatMessage>,
+
+    // System & Telemetry
+    pub memory_monitor: MemoryMonitor,
+    pub status_text: String,
+}
+
+impl Default for AppState {
+    fn default() -> Self {
+        let root = std::env::args_os()
+            .nth(1)
+            .map(PathBuf::from)
+            .filter(|p| p.is_dir())
+            .or_else(|| std::env::current_dir().ok())
+            .unwrap_or_else(|| PathBuf::from("."));
+
+        let installed_providers = detect_installed_providers();
+        let active_provider = installed_providers
+            .first()
+            .copied()
+            .unwrap_or(AiProvider::Gemini);
+
+        let default_claude_model = AiProvider::Claude.models()[0];
+        let default_gemini_model = AiProvider::Gemini.models()[0];
+
+        let mut state = Self {
+            workspace_root: PathBuf::new(),
+            workspace_name: String::new(),
+            tree: Vec::new(),
+            open_tabs: Vec::new(),
+            active_tab_idx: 0,
+            installed_providers,
+            active_provider,
+            selected_claude_model: default_claude_model,
+            selected_gemini_model: default_gemini_model,
+            attach_active_file: true,
+            prompt_input: String::new(),
+            claude_messages: vec![ChatMessage {
+                role: ChatRole::Assistant,
+                model_label: default_claude_model.to_string(),
+                content: "Claude Code 已就緒。".to_string(),
+            }],
+            gemini_messages: vec![ChatMessage {
+                role: ChatRole::Assistant,
+                model_label: default_gemini_model.to_string(),
+                content: "Gemini (Antigravity) 已就緒。".to_string(),
+            }],
+            memory_monitor: MemoryMonitor::default(),
+            status_text: "Ready".to_string(),
+        };
+
+        state.switch_workspace(root);
+        state
+    }
+}
+
+impl AppState {
+    pub fn current_model(&self) -> &'static str {
+        match self.active_provider {
+            AiProvider::Claude => self.selected_claude_model,
+            AiProvider::Gemini => self.selected_gemini_model,
+        }
+    }
+
+    pub fn set_current_model(&mut self, model: &'static str) {
+        match self.active_provider {
+            AiProvider::Claude => self.selected_claude_model = model,
+            AiProvider::Gemini => self.selected_gemini_model = model,
+        }
+    }
+
+    pub fn switch_workspace(&mut self, root: PathBuf) {
+        self.workspace_name = root
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("workspace")
+            .to_string();
+        self.workspace_root = root.clone();
+        self.tree = scan_directory(&root, &root, 0);
+        self.open_tabs.clear();
+        self.active_tab_idx = 0;
+
+        let candidates = ["src/main.rs", "Cargo.toml", "README.md", "package.json"];
+        for rel in candidates {
+            let full = root.join(rel);
+            if full.is_file() {
+                self.open_file_tab(&full, rel);
+            }
+        }
+        self.active_tab_idx = 0;
+        self.status_text = format!("已開啟工作區: {}", self.workspace_root.display());
+    }
+
+    pub fn prompt_open_folder(&mut self) {
+        if let Some(folder) = pick_folder_dialog() {
+            self.switch_workspace(folder);
+        }
+    }
+
+    pub fn open_new_window(&mut self) {
+        match spawn_new_window(None) {
+            Ok(()) => self.status_text = "已開啟新視窗".to_string(),
+            Err(e) => self.status_text = format!("無法開啟新視窗: {e}"),
+        }
+    }
+
+    pub fn open_folder_in_new_window(&mut self) {
+        if let Some(folder) = pick_folder_dialog() {
+            match spawn_new_window(Some(&folder)) {
+                Ok(()) => {
+                    self.status_text = format!("已在新視窗開啟: {}", folder.display());
+                }
+                Err(e) => self.status_text = format!("無法開啟新視窗: {e}"),
+            }
+        }
+    }
+
+    pub fn refresh_tree(&mut self) {
+        self.tree = scan_directory(&self.workspace_root, &self.workspace_root, 0);
+        self.status_text = "已重新整理目錄樹".to_string();
+    }
+
+    pub fn open_file_tab(&mut self, full_path: &Path, rel_path: &str) {
+        let normalized_rel = rel_path.replace('\\', "/");
+        if let Some(existing_idx) = self
+            .open_tabs
+            .iter()
+            .position(|t| t.rel_path == normalized_rel)
+        {
+            self.active_tab_idx = existing_idx;
+            return;
+        }
+
+        let content = std::fs::read_to_string(full_path)
+            .unwrap_or_else(|_| "// 無法讀取為 UTF-8 文字檔".to_string());
+        let name = full_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or(&normalized_rel)
+            .to_string();
+
+        self.open_tabs.push(OpenTab {
+            name,
+            rel_path: normalized_rel.clone(),
+            full_path: full_path.to_path_buf(),
+            content,
+            is_dirty: false,
+        });
+        self.active_tab_idx = self.open_tabs.len() - 1;
+        self.status_text = format!("開啟 {}", normalized_rel);
+    }
+
+    pub fn close_tab(&mut self, idx: usize) {
+        if idx < self.open_tabs.len() {
+            self.open_tabs.remove(idx);
+            if self.open_tabs.is_empty() {
+                self.active_tab_idx = 0;
+            } else if self.active_tab_idx >= self.open_tabs.len() {
+                self.active_tab_idx = self.open_tabs.len() - 1;
+            }
+        }
+    }
+
+    pub fn save_active_tab(&mut self) {
+        if let Some(tab) = self.open_tabs.get_mut(self.active_tab_idx) {
+            if std::fs::write(&tab.full_path, &tab.content).is_ok() {
+                tab.is_dirty = false;
+                self.status_text = format!("已儲存 {}", tab.rel_path);
+            } else {
+                self.status_text = format!("儲存失敗: {}", tab.rel_path);
+            }
+        }
+    }
+
+    pub fn active_tab(&self) -> Option<&OpenTab> {
+        self.open_tabs.get(self.active_tab_idx)
+    }
+
+    pub fn active_tab_mut(&mut self) -> Option<&mut OpenTab> {
+        self.open_tabs.get_mut(self.active_tab_idx)
+    }
+
+    pub fn send_prompt(&mut self) {
+        let text = self.prompt_input.trim().to_string();
+        if text.is_empty() {
+            return;
+        }
+        self.prompt_input.clear();
+
+        let context_prefix = if self.attach_active_file {
+            if let Some(tab) = self.active_tab() {
+                format!("@{} \n", tab.rel_path)
+            } else {
+                String::new()
+            }
+        } else {
+            String::new()
+        };
+
+        let user_msg = format!("{context_prefix}{text}");
+        let model_label = self.current_model().to_string();
+
+        let list = match self.active_provider {
+            AiProvider::Claude => &mut self.claude_messages,
+            AiProvider::Gemini => &mut self.gemini_messages,
+        };
+
+        list.push(ChatMessage {
+            role: ChatRole::User,
+            model_label: model_label.clone(),
+            content: user_msg,
+        });
+
+        list.push(ChatMessage {
+            role: ChatRole::Assistant,
+            model_label: model_label.clone(),
+            content: format!("[{model_label}] 收到請求，正在分析處理中..."),
+        });
+    }
+}
+
+/// Detect at startup whether Claude Code and/or Gemini (Antigravity) are installed on this system.
+fn detect_installed_providers() -> Vec<AiProvider> {
+    let mut providers = Vec::new();
+
+    if is_claude_installed() {
+        providers.push(AiProvider::Claude);
+    }
+    if is_gemini_installed() {
+        providers.push(AiProvider::Gemini);
+    }
+
+    // Fallback so UI is never empty if neither is found on a clean machine
+    if providers.is_empty() {
+        providers.push(AiProvider::Gemini);
+    }
+
+    providers
+}
+
+fn is_claude_installed() -> bool {
+    if find_in_path(&["claude.exe", "claude.cmd", "claude"]) {
+        return true;
+    }
+    if let Ok(profile) = std::env::var("USERPROFILE") {
+        let p = Path::new(&profile);
+        if p.join(".claude").is_dir() || p.join(".claude.json").is_file() {
+            return true;
+        }
+    }
+    if let Ok(local_app) = std::env::var("LOCALAPPDATA") {
+        let p = Path::new(&local_app);
+        if p.join("Programs").join("claude").is_dir()
+            || p.join("AnthropicClaude").is_dir()
+        {
+            return true;
+        }
+    }
+    false
+}
+
+fn is_gemini_installed() -> bool {
+    if find_in_path(&["gemini.exe", "gemini.cmd", "agy.exe", "agy.cmd", "antigravity.cmd"]) {
+        return true;
+    }
+    if let Ok(profile) = std::env::var("USERPROFILE") {
+        let p = Path::new(&profile);
+        if p.join(".gemini").is_dir() {
+            return true;
+        }
+    }
+    if let Ok(local_app) = std::env::var("LOCALAPPDATA") {
+        let p = Path::new(&local_app);
+        if p.join("Programs").join("Antigravity").is_dir() {
+            return true;
+        }
+    }
+    false
+}
+
+fn find_in_path(bins: &[&str]) -> bool {
+    let Some(path_var) = std::env::var_os("PATH") else {
+        return false;
+    };
+    for dir in std::env::split_paths(&path_var) {
+        for bin in bins {
+            if dir.join(bin).is_file() {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+fn scan_directory(root: &Path, dir: &Path, depth: usize) -> Vec<TreeNode> {
+    if depth > 6 {
+        return Vec::new();
+    }
+
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return Vec::new();
+    };
+
+    let mut dirs = Vec::new();
+    let mut files = Vec::new();
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let Some(name_os) = path.file_name() else {
+            continue;
+        };
+        let name = name_os.to_string_lossy().to_string();
+
+        if name == "target" || name == ".git" || name == "node_modules" || name == ".idea" {
+            continue;
+        }
+
+        let rel_path = path
+            .strip_prefix(root)
+            .unwrap_or(&path)
+            .to_string_lossy()
+            .replace('\\', "/");
+
+        if path.is_dir() {
+            let children = scan_directory(root, &path, depth + 1);
+            dirs.push(TreeNode {
+                name,
+                rel_path,
+                full_path: path,
+                is_dir: true,
+                expanded: depth < 2,
+                children,
+            });
+        } else {
+            files.push(TreeNode {
+                name,
+                rel_path,
+                full_path: path,
+                is_dir: false,
+                expanded: false,
+                children: Vec::new(),
+            });
+        }
+    }
+
+    dirs.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    files.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    dirs.extend(files);
+    dirs
+}

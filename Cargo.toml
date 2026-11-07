@@ -1,0 +1,26 @@
+[package]
+name = "vibers"
+version = "0.1.0"
+edition = "2021"
+authors = ["VibeRS Team"]
+description = "Ultra-lightweight Rust Native Vibe Coding IDE (UI Prototype)"
+
+[dependencies]
+eframe = { version = "0.31", default-features = false, features = [
+    "glow",
+    "default_fonts",
+    "x11",
+    "wayland",
+] }
+egui = "0.31"
+
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+opt-level = "z"
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"
+
