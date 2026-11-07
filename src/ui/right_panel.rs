@@ -110,18 +110,18 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                                 let available_models = state.active_provider.models();
 
                                 ui.menu_button(
-                                    RichText::new(format!("{current_model} ▾"))
+                                    RichText::new(format!("{} ▾", current_model.display_name))
                                         .size(11.5)
                                         .color(Palette::TEXT_PRIMARY),
                                     |ui| {
-                                        ui.set_min_width(175.0);
-                                        for &model_name in available_models {
-                                            let selected = current_model == model_name;
+                                        ui.set_min_width(200.0);
+                                        for &model_info in available_models {
+                                            let selected = current_model.id == model_info.id;
                                             if ui
-                                                .selectable_label(selected, model_name)
+                                                .selectable_label(selected, model_info.display_name)
                                                 .clicked()
                                             {
-                                                state.set_current_model(model_name);
+                                                state.set_current_model(model_info);
                                                 ui.close_menu();
                                             }
                                         }

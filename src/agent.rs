@@ -21,7 +21,7 @@ pub struct AgentTask {
 impl AgentTask {
     pub fn spawn(
         provider: AiProvider,
-        model_name: &'static str,
+        model_id: &'static str,
         workspace_root: PathBuf,
         prompt: String,
     ) -> Self {
@@ -39,25 +39,13 @@ impl AgentTask {
                         "agy.exe".to_string()
                     };
 
-                    let model_flag = if model_name.contains("3.1 Pro (High)") {
-                        "gemini-3.1-pro-high"
-                    } else if model_name.contains("3.1 Pro (Low)") {
-                        "gemini-3.1-pro-low"
-                    } else if model_name.contains("3 Flash") {
-                        "gemini-3-flash"
-                    } else if model_name.contains("2.5 Pro") {
-                        "gemini-2.5-pro"
-                    } else {
-                        "gemini-2.5-flash"
-                    };
-
                     let mut c = Command::new(exe);
-                    c.args(["-p", &prompt, "--model", model_flag]);
+                    c.args(["-p", &prompt, "--model", model_id]);
                     c
                 }
                 AiProvider::Claude => {
                     let mut c = Command::new("cmd");
-                    c.args(["/C", "claude", "-p", &prompt]);
+                    c.args(["/C", "claude", "-p", &prompt, "--model", model_id]);
                     c
                 }
             };

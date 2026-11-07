@@ -295,3 +295,44 @@ fn diff_lines(old: &[&str], new: &[&str]) -> Vec<DiffLine> {
     result
 }
 
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_compute_hunks_identical() {
+        let text = "fn main() {\n    println!(\"hello\");\n}\n";
+        let hunks = compute_hunks(text, text);
+        assert!(hunks.is_empty());
+    }
+
+    #[test]
+    fn test_compute_hunks_modification() {
+        let old = "line 1\nline 2\nline 3\nline 4\nline 5\n";
+        let new = "line 1\nline 2 (modified)\nline 3\nline 4\nline 5\n";
+        let hunks = compute_hunks(old, new);
+        assert_eq!(hunks.len(), 1);
+        let h = &hunks[0];
+        assert_eq!(h.id, 1);
+        assert!(h.lines.iter().any(|l| l.kind == DiffOpKind::Delete));
+        assert!(h.lines.iter().any(|l| l.kind == DiffOpKind::Insert));
+    }
+
+    #[test]
+    fn test_revert_hunk() {
+        let old = "alpha\nbeta\ngamma\n";
+        let new = "alpha\nbeta_changed\ngamma\n";
+        let reverted = revert_hunk_in_text(old, new, 1);
+        assert_eq!(reverted, old);
+    }
+
+    #[test]
+    fn test_accept_hunk() {
+        let old = "alpha\nbeta\ngamma\n";
+        let new = "alpha\nbeta_changed\ngamma\n";
+        let updated_snapshot = accept_hunk_in_snapshot(old, new, 1);
+        assert_eq!(updated_snapshot, new);
+    }
+}

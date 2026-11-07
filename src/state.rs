@@ -26,6 +26,12 @@ pub struct OpenTab {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct ModelInfo {
+    pub id: &'static str,
+    pub display_name: &'static str,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum AiProvider {
     Claude,
     Gemini,
@@ -39,22 +45,56 @@ impl AiProvider {
         }
     }
 
-    pub fn models(self) -> &'static [&'static str] {
+    pub fn models(self) -> &'static [ModelInfo] {
         match self {
-            // Claude Code Desktop models
             AiProvider::Claude => &[
-                "Claude Sonnet 4.5",
-                "Claude Opus 4.5",
-                "Claude Haiku 4.5",
-                "Claude 3.7 Sonnet",
+                ModelInfo {
+                    id: "claude-sonnet-5-5-medium",
+                    display_name: "Claude Sonnet 5.5 (Medium)",
+                },
+                ModelInfo {
+                    id: "claude-sonnet-5-5-high",
+                    display_name: "Claude Sonnet 5.5 (High)",
+                },
+                ModelInfo {
+                    id: "claude-opus-5-5-medium",
+                    display_name: "Claude Opus 5.5 (Medium)",
+                },
+                ModelInfo {
+                    id: "claude-opus-5-5-high",
+                    display_name: "Claude Opus 5.5 (High)",
+                },
             ],
-            // Antigravity IDE Gemini models
+            // Exactly matches `agy models` on this system!
             AiProvider::Gemini => &[
-                "Gemini 3.1 Pro (High)",
-                "Gemini 3.1 Pro (Low)",
-                "Gemini 3 Flash",
-                "Gemini 2.5 Pro",
-                "Gemini 2.5 Flash",
+                ModelInfo {
+                    id: "gemini-4-argon-medium",
+                    display_name: "Gemini 4 Argon (Medium)",
+                },
+                ModelInfo {
+                    id: "gemini-4-argon-high",
+                    display_name: "Gemini 4 Argon (High)",
+                },
+                ModelInfo {
+                    id: "gemini-4-argon-low",
+                    display_name: "Gemini 4 Argon (Low)",
+                },
+                ModelInfo {
+                    id: "gemini-3.8-flash-high",
+                    display_name: "Gemini 3.8 Flash (High)",
+                },
+                ModelInfo {
+                    id: "gemini-3.8-flash-medium",
+                    display_name: "Gemini 3.8 Flash (Medium)",
+                },
+                ModelInfo {
+                    id: "gemini-3.8-flash-low",
+                    display_name: "Gemini 3.8 Flash (Low)",
+                },
+                ModelInfo {
+                    id: "gpt-oss-120b-medium",
+                    display_name: "GPT-OSS 120B (Medium)",
+                },
             ],
         }
     }
@@ -108,8 +148,8 @@ pub struct AppState {
     // Right AI Panel (auto-detected installed providers)
     pub installed_providers: Vec<AiProvider>,
     pub active_provider: AiProvider,
-    pub selected_claude_model: &'static str,
-    pub selected_gemini_model: &'static str,
+    pub selected_claude_model: ModelInfo,
+    pub selected_gemini_model: ModelInfo,
     pub attach_active_file: bool,
     pub prompt_input: String,
     pub claude_messages: Vec<ChatMessage>,
@@ -156,12 +196,12 @@ impl Default for AppState {
             prompt_input: String::new(),
             claude_messages: vec![ChatMessage {
                 role: ChatRole::Assistant,
-                model_label: default_claude_model.to_string(),
+                model_label: default_claude_model.display_name.to_string(),
                 content: "Claude Code 已就緒。".to_string(),
             }],
             gemini_messages: vec![ChatMessage {
                 role: ChatRole::Assistant,
-                model_label: default_gemini_model.to_string(),
+                model_label: default_gemini_model.display_name.to_string(),
                 content: "Gemini (Antigravity) 已就緒。".to_string(),
             }],
             active_agent_task: None,
@@ -176,14 +216,14 @@ impl Default for AppState {
 }
 
 impl AppState {
-    pub fn current_model(&self) -> &'static str {
+    pub fn current_model(&self) -> ModelInfo {
         match self.active_provider {
             AiProvider::Claude => self.selected_claude_model,
             AiProvider::Gemini => self.selected_gemini_model,
         }
     }
 
-    pub fn set_current_model(&mut self, model: &'static str) {
+    pub fn set_current_model(&mut self, model: ModelInfo) {
         match self.active_provider {
             AiProvider::Claude => self.selected_claude_model = model,
             AiProvider::Gemini => self.selected_gemini_model = model,
@@ -398,7 +438,7 @@ impl AppState {
         };
 
         let user_msg = format!("{context_prefix}{text}");
-        let model_label = self.current_model();
+        let model = self.current_model();
 
         let list = match self.active_provider {
             AiProvider::Claude => &mut self.claude_messages,
@@ -407,21 +447,21 @@ impl AppState {
 
         list.push(ChatMessage {
             role: ChatRole::User,
-            model_label: model_label.to_string(),
+            model_label: model.display_name.to_string(),
             content: user_msg.clone(),
         });
 
         // Placeholder for streaming assistant response
         list.push(ChatMessage {
             role: ChatRole::Assistant,
-            model_label: model_label.to_string(),
+            model_label: model.display_name.to_string(),
             content: String::new(),
         });
 
         // Spawn background task
         let task = AgentTask::spawn(
             self.active_provider,
-            model_label,
+            model.id,
             self.workspace_root.clone(),
             user_msg,
         );
