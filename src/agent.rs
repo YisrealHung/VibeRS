@@ -7,13 +7,6 @@ use std::sync::mpsc::{self, Receiver};
 use std::sync::Arc;
 use std::thread;
 
-#[cfg(windows)]
-use std::os::windows::process::CommandExt;
-
-// Windows CREATE_NO_WINDOW flag to prevent popping up console/terminal window
-#[cfg(windows)]
-const CREATE_NO_WINDOW: u32 = 0x08000000;
-
 pub enum AgentEvent {
     Chunk(String),
     Finished,
@@ -74,12 +67,9 @@ impl AgentTask {
             if !workspace_root.as_os_str().is_empty() && workspace_root.is_dir() {
                 cmd.current_dir(&workspace_root);
             }
+            cmd.stdin(Stdio::null());
             cmd.stdout(Stdio::piped());
             cmd.stderr(Stdio::piped());
-
-            // Completely hide console window on Windows
-            #[cfg(windows)]
-            cmd.creation_flags(CREATE_NO_WINDOW);
 
             match cmd.spawn() {
                 Ok(mut child) => {

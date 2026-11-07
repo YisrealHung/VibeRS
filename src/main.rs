@@ -1,4 +1,4 @@
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+#![windows_subsystem = "windows"]
 
 mod agent;
 mod dialog;
@@ -8,7 +8,29 @@ mod state;
 mod theme;
 mod ui;
 
+#[cfg(windows)]
+unsafe fn hide_console_window() {
+    extern "system" {
+        fn AllocConsole() -> i32;
+        fn GetConsoleWindow() -> *mut std::ffi::c_void;
+        fn ShowWindow(hwnd: *mut std::ffi::c_void, cmd: i32) -> i32;
+    }
+    // Allocate a hidden console so that all child processes spawned by background CLI tools
+    // (such as agy.exe's language server or claude) inherit this invisible console
+    // instead of Windows creating a flashing console window for each invocation.
+    AllocConsole();
+    let hwnd = GetConsoleWindow();
+    if !hwnd.is_null() {
+        ShowWindow(hwnd, 0); // 0 = SW_HIDE
+    }
+}
+
 fn main() -> eframe::Result<()> {
+    #[cfg(windows)]
+    unsafe {
+        hide_console_window();
+    }
+
     let viewport = egui::ViewportBuilder::default()
         .with_title("VibeRS — 次世代超輕量 Rust 原生 AI 審閱型 IDE")
         .with_inner_size([1440.0, 860.0])

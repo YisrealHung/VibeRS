@@ -14,6 +14,8 @@ use crate::theme::{apply_vibers_theme, configure_fonts};
 pub struct VibeApp {
     pub state: AppState,
     frame_count: u32,
+    ime_composing: bool,
+    last_ime_commit: Option<std::time::Instant>,
 }
 
 impl VibeApp {
@@ -27,12 +29,83 @@ impl VibeApp {
         Self {
             state,
             frame_count: 0,
+            ime_composing: false,
+            last_ime_commit: None,
         }
     }
 }
 
 impl eframe::App for VibeApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // IME Enter filtering:
+        // When typing Chinese / Japanese with an IME, pressing Enter confirms the candidate word.
+        // Windows/winit sends both ImeEvent::Commit and Key::Enter. If unhandled, egui TextEdit
+        // inserts an extra newline on the very first Enter during candidate confirmation.
+        // We filter out plain Key::Enter whenever IME is active or just committed.
+        ctx.input_mut(|i| {
+            let mut has_ime_commit = false;
+            let mut has_ime_preedit = false;
+
+            for event in &i.events {
+                match event {
+                    egui::Event::Ime(egui::ImeEvent::Commit(_)) => {
+                        has_ime_commit = true;
+                    }
+                    egui::Event::Ime(egui::ImeEvent::Preedit(s)) if !s.is_empty() => {
+                        has_ime_preedit = true;
+                    }
+                    _ => {}
+                }
+            }
+
+            let ime_just_committed = self
+                .last_ime_commit
+                .map(|t| t.elapsed() < std::time::Duration::from_millis(150))
+                .unwrap_or(false);
+
+            if has_ime_commit || has_ime_preedit || self.ime_composing || ime_just_committed {
+                let mut removed_enter = false;
+                i.events.retain(|e| {
+                    if let egui::Event::Key {
+                        key: egui::Key::Enter,
+                        pressed: true,
+                        modifiers,
+                        ..
+                    } = e
+                    {
+                        if modifiers.is_none() {
+                            removed_enter = true;
+                            return false;
+                        }
+                    }
+                    true
+                });
+
+                if removed_enter {
+                    self.last_ime_commit = None;
+                }
+            }
+
+            for event in &i.events {
+                match event {
+                    egui::Event::Ime(egui::ImeEvent::Enabled) => {
+                        self.ime_composing = true;
+                    }
+                    egui::Event::Ime(egui::ImeEvent::Preedit(s)) => {
+                        self.ime_composing = !s.is_empty();
+                    }
+                    egui::Event::Ime(egui::ImeEvent::Commit(_)) => {
+                        self.ime_composing = false;
+                        self.last_ime_commit = Some(std::time::Instant::now());
+                    }
+                    egui::Event::Ime(egui::ImeEvent::Disabled) => {
+                        self.ime_composing = false;
+                    }
+                    _ => {}
+                }
+            }
+        });
+
         if self.frame_count < 4 {
             self.frame_count += 1;
             if self.frame_count == 2 {
