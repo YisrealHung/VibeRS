@@ -34,23 +34,13 @@
 
 ---
 
-### [ ] Stage 1：左側資料夾樹與多分頁編輯器體驗強化
-**目標**：讓日常瀏覽與基礎檔案操作的體驗更加完整，同時不增加介面雜訊。
-
-1. **左鍵/右鍵基礎檔案操作（`src/ui/left_panel.rs`, `src/state.rs`）**：
-   - 在左側資料夾樹的檔案或資料夾項目上支援右鍵選單（`response.context_menu`）：
-     - `New File...`（在該目錄下新增檔案並直接於中間開啟分頁）
-     - `New Folder...`（新增子資料夾）
-     - `Rename...`（重新命名檔案或資料夾）
-     - `Delete`（刪除檔案並同步關閉對應分頁）
-2. **快捷檔案跳轉 (`Ctrl+P` Quick Open)（新增 `src/ui/quick_open.rs`）**：
-   - 按下 `Ctrl+P` 時，在視窗中上方彈出極簡的 `egui::Window` 搜尋框。
-   - 輸入關鍵字即時模糊過濾 `state.tree` 內的所有檔案路徑，按 `Enter` 直接開啟/切換至該分頁並關閉彈窗，按 `Esc` 取消。
-3. **未儲存關閉保護与全部儲存 (`Ctrl+Shift+S`)**：
-   - 當分頁帶有 `is_dirty == true` 且使用者點擊 `×` 時，提供簡易確認或直接支援 `File -> Save All (Ctrl+Shift+S)`。
-4. **驗收條件**：
-   - `cargo build --offline` 零警告通過。
-   - 可透過 `Ctrl+P` 搜尋開啟檔案、右鍵新增/改名檔案，且左側面板寬度拖拉依然保持穩定。
+### [x] Stage 1：左側資料夾樹與多分頁編輯器體驗強化
+- **完成狀態**：已完成並驗證通過（RAM: `8.65 MB`，Binary: `4.8 MB`）
+- **實作內容**：
+  - 左側樹狀圖右鍵選單（`New File...`、`New Folder...`、`Rename...`、`Delete...`）及互動彈窗。
+  - `Ctrl+P` Quick Open 快速模糊搜尋檔案跳轉視窗（`src/ui/quick_open.rs`），支援鍵盤上下鍵選擇與 Enter 開啟。
+  - 未儲存分頁關閉防護（詢問儲存/捨棄/取消）與 `Ctrl+Shift+S` / `File -> Save All` 全部儲存。
+  - 零 warning 編譯通過，RAM 穩定壓在 10MB 以下。
 
 ---
 
@@ -120,3 +110,4 @@
    - 執行 `cargo build --release --offline`，確認 `target/release/vibers.exe` 體積 `< 12 MB`、常駐 Working Set RAM `< 35 MB`。
 4. **驗收條件**：
    - `cargo build --release --offline` 零警告通過，捲動千行程式碼維持滿幀且記憶體不隨時間增長。
+

@@ -1,6 +1,7 @@
 pub mod bottom_bar;
 pub mod center_panel;
 pub mod left_panel;
+pub mod quick_open;
 pub mod right_panel;
 pub mod top_bar;
 
@@ -42,8 +43,16 @@ impl eframe::App for VibeApp {
             self.state.memory_monitor.update_if_needed();
         }
 
+        // Ctrl+P for Quick Open
+        if ctx.input(|i| (i.modifiers.ctrl || i.modifiers.command) && !i.modifiers.shift && i.key_pressed(egui::Key::P)) {
+            self.state.quick_open.is_open = true;
+            self.state.quick_open.focused = false;
+            self.state.quick_open.query.clear();
+            self.state.quick_open.selected_index = 0;
+        }
+
         // Ctrl+O to open folder dialog
-        if ctx.input(|i| (i.modifiers.ctrl || i.modifiers.command) && i.key_pressed(egui::Key::O)) {
+        if ctx.input(|i| (i.modifiers.ctrl || i.modifiers.command) && !i.modifiers.shift && i.key_pressed(egui::Key::O)) {
             self.state.prompt_open_folder();
         }
 
@@ -56,15 +65,24 @@ impl eframe::App for VibeApp {
             self.state.open_new_window();
         }
 
+        // Ctrl+Shift+S to save all tabs
+        if ctx.input(|i| {
+            (i.modifiers.ctrl || i.modifiers.command)
+                && i.modifiers.shift
+                && i.key_pressed(egui::Key::S)
+        }) {
+            self.state.save_all_tabs();
+        }
+
         // Ctrl+S to save current tab
-        if ctx.input(|i| (i.modifiers.ctrl || i.modifiers.command) && i.key_pressed(egui::Key::S)) {
+        if ctx.input(|i| (i.modifiers.ctrl || i.modifiers.command) && !i.modifiers.shift && i.key_pressed(egui::Key::S)) {
             self.state.save_active_tab();
         }
 
         // Ctrl+W to close current tab
         if ctx.input(|i| (i.modifiers.ctrl || i.modifiers.command) && i.key_pressed(egui::Key::W)) {
             let active = self.state.active_tab_idx;
-            self.state.close_tab(active);
+            self.state.request_close_tab(active);
         }
 
         top_bar::render_top_bar(ctx, &mut self.state);
@@ -72,5 +90,6 @@ impl eframe::App for VibeApp {
         left_panel::render_left_panel(ctx, &mut self.state);
         right_panel::render_right_panel(ctx, &mut self.state);
         center_panel::render_center_panel(ctx, &mut self.state);
+        quick_open::render_quick_open(ctx, &mut self.state);
     }
 }

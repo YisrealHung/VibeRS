@@ -43,6 +43,10 @@ pub fn render_top_bar(ctx: &egui::Context, state: &mut AppState) {
                             ui.close_menu();
                             state.save_active_tab();
                         }
+                        if ui.button("儲存全部分頁 (Save All)            Ctrl+Shift+S").clicked() {
+                            ui.close_menu();
+                            state.save_all_tabs();
+                        }
                     },
                 );
 

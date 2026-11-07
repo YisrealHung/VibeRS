@@ -69,6 +69,23 @@ pub struct ChatMessage {
     pub content: String,
 }
 
+#[derive(Clone, Debug, Default)]
+pub struct QuickOpenState {
+    pub is_open: bool,
+    pub query: String,
+    pub selected_index: usize,
+    pub focused: bool,
+}
+
+#[derive(Clone, Debug)]
+pub enum FileOpModal {
+    NewFile { parent_dir: PathBuf, input_name: String },
+    NewFolder { parent_dir: PathBuf, input_name: String },
+    Rename { target_path: PathBuf, input_name: String },
+    DeleteConfirm { target_path: PathBuf, is_dir: bool },
+    CloseDirtyConfirm { tab_idx: usize, tab_name: String },
+}
+
 pub struct AppState {
     pub workspace_root: PathBuf,
     pub workspace_name: String,
@@ -77,6 +94,12 @@ pub struct AppState {
     // Editor Tabs
     pub open_tabs: Vec<OpenTab>,
     pub active_tab_idx: usize,
+
+    // Quick Open
+    pub quick_open: QuickOpenState,
+
+    // File Operation Dialog Modal
+    pub file_op_modal: Option<FileOpModal>,
 
     // Right AI Panel (auto-detected installed providers)
     pub installed_providers: Vec<AiProvider>,
@@ -117,6 +140,8 @@ impl Default for AppState {
             tree: Vec::new(),
             open_tabs: Vec::new(),
             active_tab_idx: 0,
+            quick_open: QuickOpenState::default(),
+            file_op_modal: None,
             installed_providers,
             active_provider,
             selected_claude_model: default_claude_model,
@@ -238,6 +263,19 @@ impl AppState {
         self.status_text = format!("開啟 {}", normalized_rel);
     }
 
+    pub fn request_close_tab(&mut self, idx: usize) {
+        if let Some(tab) = self.open_tabs.get(idx) {
+            if tab.is_dirty {
+                self.file_op_modal = Some(FileOpModal::CloseDirtyConfirm {
+                    tab_idx: idx,
+                    tab_name: tab.name.clone(),
+                });
+                return;
+            }
+        }
+        self.close_tab(idx);
+    }
+
     pub fn close_tab(&mut self, idx: usize) {
         if idx < self.open_tabs.len() {
             self.open_tabs.remove(idx);
@@ -260,12 +298,31 @@ impl AppState {
         }
     }
 
+    pub fn save_all_tabs(&mut self) {
+        let mut count = 0;
+        for tab in &mut self.open_tabs {
+            if tab.is_dirty {
+                if std::fs::write(&tab.full_path, &tab.content).is_ok() {
+                    tab.is_dirty = false;
+                    count += 1;
+                }
+            }
+        }
+        self.status_text = format!("已儲存全部分頁 (共 {count} 個檔案)");
+    }
+
     pub fn active_tab(&self) -> Option<&OpenTab> {
         self.open_tabs.get(self.active_tab_idx)
     }
 
     pub fn active_tab_mut(&mut self) -> Option<&mut OpenTab> {
         self.open_tabs.get_mut(self.active_tab_idx)
+    }
+
+    pub fn file_list(&self) -> Vec<(PathBuf, String)> {
+        let mut list = Vec::new();
+        collect_files(&self.tree, &mut list);
+        list
     }
 
     pub fn send_prompt(&mut self) {
@@ -304,6 +361,16 @@ impl AppState {
             model_label: model_label.clone(),
             content: format!("[{model_label}] 收到請求，正在分析處理中..."),
         });
+    }
+}
+
+fn collect_files(nodes: &[TreeNode], out: &mut Vec<(PathBuf, String)>) {
+    for node in nodes {
+        if node.is_dir {
+            collect_files(&node.children, out);
+        } else {
+            out.push((node.full_path.clone(), node.rel_path.clone()));
+        }
     }
 }
 

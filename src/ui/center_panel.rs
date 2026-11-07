@@ -229,7 +229,7 @@ fn render_tab_bar(ui: &mut egui::Ui, state: &mut AppState) {
                     state.active_tab_idx = idx;
                 }
                 if let Some(idx) = tab_to_close {
-                    state.close_tab(idx);
+                    state.request_close_tab(idx);
                 }
             });
         });
