@@ -30,6 +30,8 @@ pub struct OpenTab {
     pub disk_snapshot: String,
     pub is_dirty: bool,
     pub show_diff: bool,
+    pub is_binary: bool,
+    pub file_size: u64,
     pub markdown_mode: MarkdownViewMode,
     pub last_disk_modified: Option<std::time::SystemTime>,
 }
@@ -38,6 +40,18 @@ impl OpenTab {
     pub fn is_markdown(&self) -> bool {
         let l = self.name.to_lowercase();
         l.ends_with(".md") || l.ends_with(".markdown")
+    }
+
+    pub fn is_image(&self) -> bool {
+        let l = self.name.to_lowercase();
+        l.ends_with(".png")
+            || l.ends_with(".jpg")
+            || l.ends_with(".jpeg")
+            || l.ends_with(".gif")
+            || l.ends_with(".bmp")
+            || l.ends_with(".webp")
+            || l.ends_with(".ico")
+            || l.ends_with(".svg")
     }
 }
 
@@ -412,16 +426,18 @@ impl AppState {
                     if let Some(prev_mtime) = tab.last_disk_modified {
                         if disk_mtime > prev_mtime {
                             tab.last_disk_modified = Some(disk_mtime);
-                            if let Ok(new_disk_content) = std::fs::read_to_string(&tab.full_path) {
-                                if new_disk_content != tab.content {
-                                    // External change detected:
-                                    // Keep current content as snapshot, update tab.content to new external code,
-                                    // and enable diff mode automatically for review.
-                                    tab.disk_snapshot = tab.content.clone();
-                                    tab.content = new_disk_content;
-                                    tab.show_diff = true;
-                                    tab.is_dirty = false;
-                                    changes_found = true;
+                            if !tab.is_binary {
+                                if let Ok(new_disk_content) = std::fs::read_to_string(&tab.full_path) {
+                                    if new_disk_content != tab.content {
+                                        // External change detected:
+                                        // Keep current content as snapshot, update tab.content to new external code,
+                                        // and enable diff mode automatically for review.
+                                        tab.disk_snapshot = tab.content.clone();
+                                        tab.content = new_disk_content;
+                                        tab.show_diff = true;
+                                        tab.is_dirty = false;
+                                        changes_found = true;
+                                    }
                                 }
                             }
                         }
@@ -448,15 +464,46 @@ impl AppState {
             return;
         }
 
-        let content = std::fs::read_to_string(full_path)
-            .unwrap_or_else(|_| "// 無法讀取為 UTF-8 文字檔".to_string());
+        let metadata = full_path.metadata().ok();
+        let file_size = metadata.as_ref().map(|m| m.len()).unwrap_or(0);
+        let last_disk_modified = metadata.and_then(|m| m.modified().ok());
+
         let name = full_path
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or(&normalized_rel)
             .to_string();
 
-        let last_disk_modified = full_path.metadata().and_then(|m| m.modified()).ok();
+        let is_image = {
+            let l = name.to_lowercase();
+            l.ends_with(".png")
+                || l.ends_with(".jpg")
+                || l.ends_with(".jpeg")
+                || l.ends_with(".gif")
+                || l.ends_with(".bmp")
+                || l.ends_with(".webp")
+                || l.ends_with(".ico")
+                || l.ends_with(".svg")
+        };
+
+        let (content, is_binary) = if is_image {
+            (String::new(), true)
+        } else {
+            match std::fs::read(full_path) {
+                Ok(bytes) => {
+                    let check_len = bytes.len().min(1024);
+                    if bytes[..check_len].contains(&0) {
+                        (String::new(), true)
+                    } else {
+                        match String::from_utf8(bytes) {
+                            Ok(text) => (text, false),
+                            Err(_) => (String::new(), true),
+                        }
+                    }
+                }
+                Err(_) => (String::new(), true),
+            }
+        };
 
         self.open_tabs.push(OpenTab {
             name,
@@ -466,6 +513,8 @@ impl AppState {
             disk_snapshot: content,
             is_dirty: false,
             show_diff: false,
+            is_binary,
+            file_size,
             markdown_mode: MarkdownViewMode::default(),
             last_disk_modified,
         });

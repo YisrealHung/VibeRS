@@ -172,14 +172,16 @@ pub fn render_center_panel(ctx: &egui::Context, state: &mut AppState) {
                 .show_inside(ui, |ui| {
                     if is_showing_diff {
                         render_inline_diff_view(ui, state, &mut tab_action_accept_hunk, &mut tab_action_revert_hunk);
-                    } else if md_mode.0 && md_mode.1 == crate::state::MarkdownViewMode::Preview {
-                        if let Some(tab) = state.active_tab() {
+                    } else if let Some(tab) = state.active_tab() {
+                        if tab.is_binary {
+                            render_binary_file_view(ui, tab);
+                        } else if md_mode.0 && md_mode.1 == crate::state::MarkdownViewMode::Preview {
                             render_markdown_preview_view(ui, &tab.content);
+                        } else if md_mode.0 && md_mode.1 == crate::state::MarkdownViewMode::Split {
+                            render_markdown_split_view(ui, state);
+                        } else {
+                            render_code_editor_view(ui, state);
                         }
-                    } else if md_mode.0 && md_mode.1 == crate::state::MarkdownViewMode::Split {
-                        render_markdown_split_view(ui, state);
-                    } else {
-                        render_code_editor_view(ui, state);
                     }
                 });
 
@@ -533,4 +535,157 @@ fn render_tab_bar(ui: &mut egui::Ui, state: &mut AppState) {
                 }
             });
         });
+}
+
+fn render_binary_file_view(ui: &mut egui::Ui, tab: &crate::state::OpenTab) {
+    ui.centered_and_justified(|ui| {
+        Frame::NONE
+            .fill(Palette::BG_INPUT().gamma_multiply(0.4))
+            .stroke(Stroke::new(1.0, Palette::BORDER()))
+            .corner_radius(CornerRadius::same(8))
+            .inner_margin(Margin::symmetric(36, 28))
+            .show(ui, |ui| {
+                ui.set_max_width(500.0);
+                ui.vertical_centered(|ui| {
+                    let ext = tab
+                        .full_path
+                        .extension()
+                        .and_then(|e| e.to_str())
+                        .unwrap_or("")
+                        .to_lowercase();
+                    let is_img = tab.is_image();
+
+                    let icon = if is_img { "🖼" } else { "📦" };
+                    let title = if is_img {
+                        "圖片檔案 (Image File)"
+                    } else {
+                        "二進位檔案 (Binary File)"
+                    };
+
+                    ui.label(RichText::new(icon).size(36.0));
+                    ui.add_space(8.0);
+                    ui.label(
+                        RichText::new(title)
+                            .size(16.0)
+                            .strong()
+                            .color(Palette::highlight_text()),
+                    );
+                    ui.add_space(4.0);
+                    ui.label(
+                        RichText::new(&tab.name)
+                            .font(FontId::monospace(13.5))
+                            .color(Palette::ACCENT()),
+                    );
+
+                    ui.add_space(16.0);
+                    ui.separator();
+                    ui.add_space(12.0);
+
+                    // Details grid
+                    egui::Grid::new("binary_file_info_grid")
+                        .spacing([18.0, 8.0])
+                        .show(ui, |ui| {
+                            ui.label(RichText::new("檔案格式:").size(12.0).color(Palette::TEXT_DIM()));
+                            ui.label(
+                                RichText::new(get_file_type_desc(&ext))
+                                    .size(12.0)
+                                    .color(Palette::TEXT_PRIMARY()),
+                            );
+                            ui.end_row();
+
+                            ui.label(RichText::new("檔案大小:").size(12.0).color(Palette::TEXT_DIM()));
+                            ui.label(
+                                RichText::new(format_file_size(tab.file_size))
+                                    .size(12.0)
+                                    .color(Palette::TEXT_PRIMARY()),
+                            );
+                            ui.end_row();
+
+                            ui.label(RichText::new("專案路徑:").size(12.0).color(Palette::TEXT_DIM()));
+                            ui.label(
+                                RichText::new(&tab.rel_path)
+                                    .size(12.0)
+                                    .color(Palette::TEXT_PRIMARY()),
+                            );
+                            ui.end_row();
+                        });
+
+                    ui.add_space(16.0);
+                    ui.separator();
+                    ui.add_space(12.0);
+
+                    // Explanation
+                    let reason_text = if is_img {
+                        "💡 為確保 IDE 極致效能並維持超低記憶體佔用（< 10 MB），\n本軟體預設不於純文字編輯區中解碼載入高解析度點陣像素圖。"
+                    } else {
+                        "💡 此檔案為二進位檔案，無法直接在文字編輯器中檢視或修改。"
+                    };
+
+                    ui.label(
+                        RichText::new(reason_text)
+                            .size(11.5)
+                            .color(Palette::TEXT_MUTED()),
+                    );
+
+                    ui.add_space(16.0);
+
+                    ui.horizontal(|ui| {
+                        let btn_text = if is_img {
+                            "🚀 以系統相片檢視器開啟"
+                        } else {
+                            "🚀 以系統關聯程式開啟"
+                        };
+                        if ui
+                            .button(RichText::new(btn_text).size(12.0).color(Palette::ACCENT()))
+                            .clicked()
+                        {
+                            let _ = std::process::Command::new("cmd")
+                                .args(["/C", "start", "", &tab.full_path.to_string_lossy()])
+                                .spawn();
+                        }
+
+                        if ui
+                            .button(
+                                RichText::new("📂 在檔案總管中顯示")
+                                    .size(12.0)
+                                    .color(Palette::TEXT_PRIMARY()),
+                            )
+                            .clicked()
+                        {
+                            let _ = std::process::Command::new("explorer")
+                                .args(["/select,", &tab.full_path.to_string_lossy()])
+                                .spawn();
+                        }
+                    });
+                });
+            });
+    });
+}
+
+fn format_file_size(bytes: u64) -> String {
+    if bytes < 1024 {
+        format!("{bytes} B")
+    } else if bytes < 1024 * 1024 {
+        format!("{:.1} KB ({bytes} bytes)", bytes as f64 / 1024.0)
+    } else {
+        format!("{:.2} MB ({bytes} bytes)", bytes as f64 / (1024.0 * 1024.0))
+    }
+}
+
+fn get_file_type_desc(ext: &str) -> &'static str {
+    match ext {
+        "png" => "PNG 點陣圖影像 (image/png)",
+        "jpg" | "jpeg" => "JPEG 壓縮影像 (image/jpeg)",
+        "gif" => "GIF 動態/靜態影像 (image/gif)",
+        "bmp" => "BMP 點陣圖 (image/bmp)",
+        "webp" => "WebP 高效影像 (image/webp)",
+        "ico" => "ICO 圖示檔案 (image/x-icon)",
+        "svg" => "SVG 向量影像 (image/svg+xml)",
+        "mp4" | "mkv" | "avi" => "視訊媒體檔案 (Video)",
+        "mp3" | "wav" | "flac" => "音訊媒體檔案 (Audio)",
+        "pdf" => "PDF 文件檔案 (application/pdf)",
+        "zip" | "tar" | "gz" | "7z" => "壓縮封裝檔案 (Archive)",
+        "exe" | "dll" | "pdb" => "Windows 二進位執行檔或組件",
+        _ => "二進位檔案 (Binary File)",
+    }
 }

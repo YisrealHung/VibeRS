@@ -34,9 +34,20 @@ pub fn render_bottom_bar(ctx: &egui::Context, state: &mut AppState) {
                     ui.separator();
 
                     if let Some(tab) = state.active_tab() {
-                        let lines = tab.content.lines().count().max(1);
+                        let text = if tab.is_binary {
+                            let ext = tab
+                                .full_path
+                                .extension()
+                                .and_then(|e| e.to_str())
+                                .unwrap_or("bin")
+                                .to_uppercase();
+                            format!("{ext}  ·  Binary")
+                        } else {
+                            let lines = tab.content.lines().count().max(1);
+                            format!("{lines} lines  ·  UTF-8")
+                        };
                         ui.label(
-                            RichText::new(format!("{lines} lines  ·  UTF-8"))
+                            RichText::new(text)
                                 .size(11.0)
                                 .color(Palette::TEXT_DIM()),
                         );
