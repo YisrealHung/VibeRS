@@ -1,4 +1,4 @@
-﻿use crate::theme::Palette;
+use crate::theme::Palette;
 use egui::{text::LayoutJob, CornerRadius, FontId, Frame, Margin, RichText, Stroke, TextFormat, Ui};
 
 /// Render beautiful Markdown blocks like Antigravity IDE

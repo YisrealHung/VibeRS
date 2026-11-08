@@ -272,11 +272,12 @@ pub fn configure_fonts(ctx: &egui::Context) -> String {
         }
     }
 
-    // Load both Traditional and Simplified Chinese fonts to ensure 100% glyph coverage
+    // Load both Traditional and Simplified Chinese fonts and Emoji to ensure 100% glyph coverage
     let cjk_fonts = [
         ("MicrosoftJhengHei", r"C:\Windows\Fonts\msjh.ttc"),
         ("MicrosoftYaHei", r"C:\Windows\Fonts\msyh.ttc"),
         ("NotoSansTC", r"C:\Windows\Fonts\NotoSansTC-VF.ttf"),
+        ("SegoeUIEmoji", r"C:\Windows\Fonts\seguiemj.ttf"),
     ];
     for (name, path) in cjk_fonts {
         if let Ok(bytes) = std::fs::read(path) {

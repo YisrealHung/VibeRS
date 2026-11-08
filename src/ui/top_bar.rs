@@ -65,7 +65,7 @@ pub fn render_top_bar(ctx: &egui::Context, state: &mut AppState) {
                             if ui
                                 .selectable_label(
                                     cur_theme == crate::theme::ThemeMode::Light,
-                                    "☀️ 白色主題 (Light)",
+                                    "\u{2600} 白色主題 (Light)",
                                 )
                                 .clicked()
                             {

@@ -1,4 +1,4 @@
-﻿use crate::theme::Palette;
+use crate::theme::Palette;
 use egui::{
     text::LayoutJob,
     FontId, TextFormat,

@@ -29,6 +29,28 @@ pub struct OpenTab {
 pub struct ModelInfo {
     pub id: &'static str,
     pub display_name: &'static str,
+    pub quota_limit: u32,
+}
+
+impl ModelInfo {
+    pub fn quota_str(self, used: u32) -> String {
+        if self.quota_limit == 0 {
+            "Unlimited".to_string()
+        } else {
+            let remaining = self.quota_limit.saturating_sub(used);
+            format!("{}/{}", remaining, self.quota_limit)
+        }
+    }
+
+    pub fn quota_badge(self, used: u32) -> String {
+        if self.quota_limit == 0 {
+            "Unlimited".to_string()
+        } else {
+            let remaining = self.quota_limit.saturating_sub(used);
+            let pct = (remaining * 100) / self.quota_limit;
+            format!("{}%", pct)
+        }
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -51,18 +73,22 @@ impl AiProvider {
                 ModelInfo {
                     id: "claude-sonnet-5-5-medium",
                     display_name: "Claude Sonnet 5.5 (Medium)",
+                    quota_limit: 50,
                 },
                 ModelInfo {
                     id: "claude-sonnet-5-5-high",
                     display_name: "Claude Sonnet 5.5 (High)",
+                    quota_limit: 50,
                 },
                 ModelInfo {
                     id: "claude-opus-5-5-medium",
                     display_name: "Claude Opus 5.5 (Medium)",
+                    quota_limit: 25,
                 },
                 ModelInfo {
                     id: "claude-opus-5-5-high",
                     display_name: "Claude Opus 5.5 (High)",
+                    quota_limit: 25,
                 },
             ],
             // Exactly matches `agy models` on this system!
@@ -70,30 +96,37 @@ impl AiProvider {
                 ModelInfo {
                     id: "gemini-4-argon-medium",
                     display_name: "Gemini 4 Argon (Medium)",
+                    quota_limit: 50,
                 },
                 ModelInfo {
                     id: "gemini-4-argon-high",
                     display_name: "Gemini 4 Argon (High)",
+                    quota_limit: 50,
                 },
                 ModelInfo {
                     id: "gemini-4-argon-low",
                     display_name: "Gemini 4 Argon (Low)",
+                    quota_limit: 100,
                 },
                 ModelInfo {
                     id: "gemini-3.8-flash-high",
                     display_name: "Gemini 3.8 Flash (High)",
+                    quota_limit: 150,
                 },
                 ModelInfo {
                     id: "gemini-3.8-flash-medium",
                     display_name: "Gemini 3.8 Flash (Medium)",
+                    quota_limit: 150,
                 },
                 ModelInfo {
                     id: "gemini-3.8-flash-low",
                     display_name: "Gemini 3.8 Flash (Low)",
+                    quota_limit: 0, // Unlimited
                 },
                 ModelInfo {
                     id: "gpt-oss-120b-medium",
                     display_name: "GPT-OSS 120B (Medium)",
+                    quota_limit: 100,
                 },
             ],
         }
@@ -155,6 +188,7 @@ pub struct AppState {
     pub claude_messages: Vec<ChatMessage>,
     pub gemini_messages: Vec<ChatMessage>,
     pub active_agent_task: Option<AgentTask>,
+    pub model_used_counts: std::collections::HashMap<String, u32>,
 
     // System & Telemetry
     pub memory_monitor: MemoryMonitor,
@@ -204,6 +238,7 @@ impl Default for AppState {
                 content: "Gemini (Antigravity) 已就緒。".to_string(),
             }],
             active_agent_task: None,
+            model_used_counts: std::collections::HashMap::new(),
             memory_monitor: MemoryMonitor::default(),
             last_disk_check: std::time::Instant::now(),
             status_text: "Ready".to_string(),
@@ -232,6 +267,10 @@ impl AppState {
             AiProvider::Claude => self.selected_claude_model = model,
             AiProvider::Gemini => self.selected_gemini_model = model,
         }
+    }
+
+    pub fn get_model_used(&self, model_id: &str) -> u32 {
+        self.model_used_counts.get(model_id).copied().unwrap_or(0)
     }
 
     pub fn switch_workspace(&mut self, root: PathBuf) {
@@ -447,6 +486,9 @@ impl AppState {
 
         let user_msg = format!("{context_prefix}{text}");
         let model = self.current_model();
+
+        // Track model request count
+        *self.model_used_counts.entry(model.id.to_string()).or_insert(0) += 1;
 
         let list = match self.active_provider {
             AiProvider::Claude => &mut self.claude_messages,

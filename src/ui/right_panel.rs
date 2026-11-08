@@ -109,19 +109,49 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                             ui.horizontal(|ui| {
                                 let current_model = state.current_model();
                                 let available_models = state.active_provider.models();
+                                let cur_used = state.get_model_used(current_model.id);
+                                let btn_label = format!(
+                                    "{} [{}] ▾",
+                                    current_model.display_name,
+                                    current_model.quota_badge(cur_used)
+                                );
 
                                 ui.menu_button(
-                                    RichText::new(format!("{} ▾", current_model.display_name))
+                                    RichText::new(btn_label)
                                         .size(11.5)
                                         .color(Palette::TEXT_PRIMARY()),
                                     |ui| {
-                                        ui.set_min_width(200.0);
+                                        ui.set_min_width(260.0);
                                         for &model_info in available_models {
                                             let selected = current_model.id == model_info.id;
-                                            if ui
-                                                .selectable_label(selected, model_info.display_name)
-                                                .clicked()
-                                            {
+                                            let used = state.get_model_used(model_info.id);
+                                            let quota_text = model_info.quota_str(used);
+
+                                            let mut clicked = false;
+                                            ui.horizontal(|ui| {
+                                                if ui.selectable_label(selected, model_info.display_name).clicked() {
+                                                    clicked = true;
+                                                }
+                                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                                    let resp = ui.add(
+                                                        egui::Label::new(
+                                                            RichText::new(&quota_text)
+                                                                .size(11.0)
+                                                                .color(if selected {
+                                                                    Palette::ACCENT()
+                                                                } else {
+                                                                    Palette::TEXT_MUTED()
+                                                                }),
+                                                        )
+                                                        .sense(egui::Sense::click()),
+                                                    );
+                                                    if resp.clicked() {
+                                                        clicked = true;
+                                                    }
+                                                });
+                                            });
+
+                                            if clicked {
                                                 state.set_current_model(model_info);
                                                 ui.close_menu();
                                             }
