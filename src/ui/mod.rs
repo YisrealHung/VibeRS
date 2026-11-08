@@ -117,6 +117,8 @@ impl eframe::App for VibeApp {
         } else {
             self.state.memory_monitor.update_if_needed();
             self.state.check_external_disk_changes();
+            // Regularly update RAM and system telemetry once per second even when idle
+            ctx.request_repaint_after(std::time::Duration::from_millis(1000));
         }
 
         // Drain active agent task events

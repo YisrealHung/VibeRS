@@ -60,6 +60,15 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                                     AiProvider::Claude => state.claude_messages.clear(),
                                     AiProvider::Gemini => state.gemini_messages.clear(),
                                 }
+                                state.session_prompts_count = 0;
+                            }
+
+                            if state.session_prompts_count > 0 {
+                                ui.label(
+                                    RichText::new(format!("會話: {} 次", state.session_prompts_count))
+                                        .size(11.0)
+                                        .color(Palette::TEXT_DIM()),
+                                );
                             }
                         });
                     });
@@ -109,11 +118,10 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                             ui.horizontal(|ui| {
                                 let current_model = state.current_model();
                                 let available_models = state.active_provider.models();
-                                let cur_used = state.get_model_used(current_model.id);
                                 let btn_label = format!(
                                     "{} [{}] ▾",
                                     current_model.display_name,
-                                    current_model.quota_badge(cur_used)
+                                    current_model.badge()
                                 );
 
                                 ui.menu_button(
@@ -121,11 +129,15 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                                         .size(11.5)
                                         .color(Palette::TEXT_PRIMARY()),
                                     |ui| {
-                                        ui.set_min_width(260.0);
+                                        ui.set_min_width(320.0);
                                         for &model_info in available_models {
                                             let selected = current_model.id == model_info.id;
-                                            let used = state.get_model_used(model_info.id);
-                                            let quota_text = model_info.quota_str(used);
+                                            let used_count = state.get_model_session_count(model_info.id);
+                                            let tier_desc = if used_count > 0 {
+                                                format!("{} (本期: {})", model_info.desc(), used_count)
+                                            } else {
+                                                model_info.desc().to_string()
+                                            };
 
                                             let mut clicked = false;
                                             ui.horizontal(|ui| {
@@ -135,7 +147,7 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                                                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                                                     let resp = ui.add(
                                                         egui::Label::new(
-                                                            RichText::new(&quota_text)
+                                                            RichText::new(&tier_desc)
                                                                 .size(11.0)
                                                                 .color(if selected {
                                                                     Palette::ACCENT()

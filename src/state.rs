@@ -42,30 +42,53 @@ impl OpenTab {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct ModelInfo {
-    pub id: &'static str,
-    pub display_name: &'static str,
-    pub quota_limit: u32,
+pub enum ModelTier {
+    Unlimited,
+    Fast,
+    Balanced,
+    Reasoning,
+    DeepOpus,
+    Experimental,
 }
 
-impl ModelInfo {
-    pub fn quota_str(self, used: u32) -> String {
-        if self.quota_limit == 0 {
-            "Unlimited".to_string()
-        } else {
-            let remaining = self.quota_limit.saturating_sub(used);
-            format!("{}/{}", remaining, self.quota_limit)
+impl ModelTier {
+    pub fn badge_label(self) -> &'static str {
+        match self {
+            ModelTier::Unlimited => "Unlimited",
+            ModelTier::Fast => "Fast",
+            ModelTier::Balanced => "Balanced",
+            ModelTier::Reasoning => "Reasoning",
+            ModelTier::DeepOpus => "Deep Think",
+            ModelTier::Experimental => "OSS",
         }
     }
 
-    pub fn quota_badge(self, used: u32) -> String {
-        if self.quota_limit == 0 {
-            "Unlimited".to_string()
-        } else {
-            let remaining = self.quota_limit.saturating_sub(used);
-            let pct = (remaining * 100) / self.quota_limit;
-            format!("{}%", pct)
+    pub fn description(self) -> &'static str {
+        match self {
+            ModelTier::Unlimited => "無限額度 · 快速",
+            ModelTier::Fast => "高吞吐量 · 敏捷",
+            ModelTier::Balanced => "標準配額 · 均衡",
+            ModelTier::Reasoning => "進階推理 · 程式碼分析",
+            ModelTier::DeepOpus => "深度架構 · 複雜推理",
+            ModelTier::Experimental => "開源百億參數 · 實驗",
         }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct ModelInfo {
+    pub id: &'static str,
+    pub display_name: &'static str,
+    pub tier: ModelTier,
+}
+
+impl ModelInfo {
+    pub fn badge(self) -> &'static str {
+        self.tier.badge_label()
+    }
+
+    pub fn desc(self) -> &'static str {
+        self.tier.description()
     }
 }
 
@@ -87,62 +110,92 @@ impl AiProvider {
         match self {
             AiProvider::Claude => &[
                 ModelInfo {
-                    id: "claude-sonnet-5-5-medium",
-                    display_name: "Claude Sonnet 5.5 (Medium)",
-                    quota_limit: 50,
-                },
-                ModelInfo {
                     id: "claude-sonnet-5-5-high",
                     display_name: "Claude Sonnet 5.5 (High)",
-                    quota_limit: 50,
+                    tier: ModelTier::Reasoning,
                 },
                 ModelInfo {
-                    id: "claude-opus-5-5-medium",
-                    display_name: "Claude Opus 5.5 (Medium)",
-                    quota_limit: 25,
+                    id: "claude-sonnet-5-5-medium",
+                    display_name: "Claude Sonnet 5.5 (Medium)",
+                    tier: ModelTier::Reasoning,
                 },
                 ModelInfo {
                     id: "claude-opus-5-5-high",
                     display_name: "Claude Opus 5.5 (High)",
-                    quota_limit: 25,
+                    tier: ModelTier::DeepOpus,
+                },
+                ModelInfo {
+                    id: "claude-opus-5-5-medium",
+                    display_name: "Claude Opus 5.5 (Medium)",
+                    tier: ModelTier::DeepOpus,
                 },
             ],
-            // Exactly matches `agy models` on this system!
+            // Exactly matches `agy models` (Antigravity IDE official model roster)!
             AiProvider::Gemini => &[
-                ModelInfo {
-                    id: "gemini-4-argon-medium",
-                    display_name: "Gemini 4 Argon (Medium)",
-                    quota_limit: 50,
-                },
                 ModelInfo {
                     id: "gemini-4-argon-high",
                     display_name: "Gemini 4 Argon (High)",
-                    quota_limit: 50,
+                    tier: ModelTier::Balanced,
+                },
+                ModelInfo {
+                    id: "gemini-4-argon-medium",
+                    display_name: "Gemini 4 Argon (Medium)",
+                    tier: ModelTier::Balanced,
                 },
                 ModelInfo {
                     id: "gemini-4-argon-low",
                     display_name: "Gemini 4 Argon (Low)",
-                    quota_limit: 100,
+                    tier: ModelTier::Balanced,
                 },
                 ModelInfo {
                     id: "gemini-3.8-flash-high",
                     display_name: "Gemini 3.8 Flash (High)",
-                    quota_limit: 150,
+                    tier: ModelTier::Fast,
                 },
                 ModelInfo {
                     id: "gemini-3.8-flash-medium",
                     display_name: "Gemini 3.8 Flash (Medium)",
-                    quota_limit: 150,
+                    tier: ModelTier::Fast,
                 },
                 ModelInfo {
                     id: "gemini-3.8-flash-low",
                     display_name: "Gemini 3.8 Flash (Low)",
-                    quota_limit: 0, // Unlimited
+                    tier: ModelTier::Unlimited,
+                },
+                ModelInfo {
+                    id: "claude-sonnet-5-5-high",
+                    display_name: "Claude Sonnet 5.5 (High)",
+                    tier: ModelTier::Reasoning,
+                },
+                ModelInfo {
+                    id: "claude-sonnet-5-5-medium",
+                    display_name: "Claude Sonnet 5.5 (Medium)",
+                    tier: ModelTier::Reasoning,
+                },
+                ModelInfo {
+                    id: "claude-sonnet-5-5-low",
+                    display_name: "Claude Sonnet 5.5 (Low)",
+                    tier: ModelTier::Reasoning,
+                },
+                ModelInfo {
+                    id: "claude-opus-5-5-high",
+                    display_name: "Claude Opus 5.5 (High)",
+                    tier: ModelTier::DeepOpus,
+                },
+                ModelInfo {
+                    id: "claude-opus-5-5-medium",
+                    display_name: "Claude Opus 5.5 (Medium)",
+                    tier: ModelTier::DeepOpus,
+                },
+                ModelInfo {
+                    id: "claude-opus-5-5-low",
+                    display_name: "Claude Opus 5.5 (Low)",
+                    tier: ModelTier::DeepOpus,
                 },
                 ModelInfo {
                     id: "gpt-oss-120b-medium",
                     display_name: "GPT-OSS 120B (Medium)",
-                    quota_limit: 100,
+                    tier: ModelTier::Experimental,
                 },
             ],
         }
@@ -204,7 +257,8 @@ pub struct AppState {
     pub claude_messages: Vec<ChatMessage>,
     pub gemini_messages: Vec<ChatMessage>,
     pub active_agent_task: Option<AgentTask>,
-    pub model_used_counts: std::collections::HashMap<String, u32>,
+    pub session_prompts_count: u32,
+    pub model_session_counts: std::collections::HashMap<String, u32>,
 
     // System & Telemetry
     pub memory_monitor: MemoryMonitor,
@@ -254,7 +308,8 @@ impl Default for AppState {
                 content: "Gemini (Antigravity) 已就緒。".to_string(),
             }],
             active_agent_task: None,
-            model_used_counts: std::collections::HashMap::new(),
+            session_prompts_count: 0,
+            model_session_counts: std::collections::HashMap::new(),
             memory_monitor: MemoryMonitor::default(),
             last_disk_check: std::time::Instant::now(),
             status_text: "Ready".to_string(),
@@ -285,8 +340,8 @@ impl AppState {
         }
     }
 
-    pub fn get_model_used(&self, model_id: &str) -> u32 {
-        self.model_used_counts.get(model_id).copied().unwrap_or(0)
+    pub fn get_model_session_count(&self, model_id: &str) -> u32 {
+        self.model_session_counts.get(model_id).copied().unwrap_or(0)
     }
 
     pub fn switch_workspace(&mut self, root: PathBuf) {
@@ -504,8 +559,9 @@ impl AppState {
         let user_msg = format!("{context_prefix}{text}");
         let model = self.current_model();
 
-        // Track model request count
-        *self.model_used_counts.entry(model.id.to_string()).or_insert(0) += 1;
+        // Track session request counts
+        self.session_prompts_count += 1;
+        *self.model_session_counts.entry(model.id.to_string()).or_insert(0) += 1;
 
         let list = match self.active_provider {
             AiProvider::Claude => &mut self.claude_messages,

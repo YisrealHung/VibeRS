@@ -1,4 +1,4 @@
-﻿use crate::state::AppState;
+use crate::state::AppState;
 use crate::theme::Palette;
 use egui::{Frame, Margin, RichText};
 
@@ -27,7 +27,7 @@ pub fn render_bottom_bar(ctx: &egui::Context, state: &mut AppState) {
                             .color(Palette::GREEN()),
                     )
                     .on_hover_text(format!(
-                        "Working Set: {:.1} MB | Private: {:.1} MB",
+                        "實體工作集 (Working Set): {:.1} MB\n私人專用認可 (Private Bytes): {:.1} MB",
                         mem.working_set_mb, mem.private_mb
                     ));
 
