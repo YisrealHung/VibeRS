@@ -1,6 +1,7 @@
 use crate::state::{AiProvider, AppState, ChatRole};
 use crate::theme::Palette;
-use egui::{Color32, CornerRadius, Frame, Margin, RichText, Stroke};
+use egui::text::LayoutJob;
+use egui::{Color32, CornerRadius, FontId, Frame, Margin, RichText, Stroke};
 
 pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
     egui::SidePanel::right("vibers_right_ai_panel")
@@ -217,35 +218,82 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                                         ui.add_space(14.0);
                                         ui.horizontal(|ui| {
                                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
-                                                let max_text_w = (wrap_w * 0.82).max(100.0) - 28.0;
-                                                let font_id = egui::FontId::proportional(12.5);
-                                                let galley = ui.painter().layout(
-                                                    msg.content.clone(),
-                                                    font_id,
-                                                    Palette::TEXT_PRIMARY,
-                                                    max_text_w,
-                                                );
-                                                let text_w = galley.size().x.max(40.0);
+                                                ui.add_space(6.0); // right padding from scrollbar edge
 
-                                                Frame::NONE
-                                                    .fill(Palette::BG_INPUT)
-                                                    .stroke(Stroke::new(1.0, Palette::BORDER))
-                                                    .corner_radius(CornerRadius::same(10))
-                                                    .inner_margin(Margin::symmetric(14, 9))
-                                                    .show(ui, |ui| {
-                                                        ui.with_layout(egui::Layout::left_to_right(egui::Align::Min), |ui| {
-                                                            ui.set_width(text_w);
-                                                            ui.set_max_width(text_w);
-                                                            ui.add(
-                                                                egui::Label::new(
-                                                                    RichText::new(&msg.content)
-                                                                        .size(12.5)
-                                                                        .color(Palette::TEXT_PRIMARY),
-                                                                )
-                                                                .wrap(),
-                                                            );
-                                                        });
-                                                    });
+                                                let max_bubble_w = (wrap_w * 0.78).max(120.0);
+                                                let font_id = FontId::proportional(13.0);
+                                                let mono_font = FontId::monospace(12.0);
+
+                                                let mut job = LayoutJob::default();
+                                                if msg.content.starts_with('@') && msg.content.contains('\n') {
+                                                    let newline_idx = msg.content.find('\n').unwrap();
+                                                    let file_tag = &msg.content[..newline_idx];
+                                                    let rest = &msg.content[newline_idx + 1..];
+
+                                                    job.append(
+                                                        file_tag,
+                                                        0.0,
+                                                        egui::TextFormat {
+                                                            font_id: mono_font,
+                                                            color: Palette::ACCENT,
+                                                            ..Default::default()
+                                                        },
+                                                    );
+                                                    job.append(
+                                                        "\n",
+                                                        0.0,
+                                                        egui::TextFormat {
+                                                            font_id: font_id.clone(),
+                                                            color: Color32::from_rgb(238, 238, 242),
+                                                            ..Default::default()
+                                                        },
+                                                    );
+                                                    job.append(
+                                                        rest,
+                                                        0.0,
+                                                        egui::TextFormat {
+                                                            font_id: font_id.clone(),
+                                                            color: Color32::from_rgb(238, 238, 242),
+                                                            ..Default::default()
+                                                        },
+                                                    );
+                                                } else {
+                                                    job.append(
+                                                        &msg.content,
+                                                        0.0,
+                                                        egui::TextFormat {
+                                                            font_id: font_id.clone(),
+                                                            color: Color32::from_rgb(238, 238, 242),
+                                                            ..Default::default()
+                                                        },
+                                                    );
+                                                }
+                                                job.wrap.max_width = max_bubble_w - 32.0;
+
+                                                let galley = ui.fonts(|f| f.layout_job(job));
+                                                let text_size = galley.size();
+                                                let bubble_size = egui::vec2(
+                                                    (text_size.x + 32.0).min(max_bubble_w).max(50.0),
+                                                    text_size.y + 20.0,
+                                                );
+
+                                                let (rect, _response) = ui.allocate_exact_size(bubble_size, egui::Sense::hover());
+
+                                                // Antigravity style pill bubble
+                                                ui.painter().rect_filled(
+                                                    rect,
+                                                    CornerRadius::same(14),
+                                                    Color32::from_rgb(44, 45, 52),
+                                                );
+                                                ui.painter().rect_stroke(
+                                                    rect,
+                                                    CornerRadius::same(14),
+                                                    Stroke::new(1.0, Color32::from_rgb(64, 66, 76)),
+                                                    egui::StrokeKind::Inside,
+                                                );
+
+                                                let text_pos = rect.min + egui::vec2(16.0, 10.0);
+                                                ui.painter().galley(text_pos, galley, Color32::from_rgb(238, 238, 242));
                                             });
                                         });
                                         ui.add_space(8.0);
