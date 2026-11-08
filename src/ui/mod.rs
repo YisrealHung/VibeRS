@@ -186,6 +186,23 @@ impl eframe::App for VibeApp {
             self.state.save_all_tabs();
         }
 
+        // Ctrl+Shift+V to cycle Markdown preview mode (Editor -> Split -> Preview)
+        if ctx.input(|i| {
+            (i.modifiers.ctrl || i.modifiers.command)
+                && i.modifiers.shift
+                && i.key_pressed(egui::Key::V)
+        }) {
+            if let Some(tab) = self.state.active_tab_mut() {
+                if tab.is_markdown() {
+                    tab.markdown_mode = match tab.markdown_mode {
+                        crate::state::MarkdownViewMode::Editor => crate::state::MarkdownViewMode::Split,
+                        crate::state::MarkdownViewMode::Split => crate::state::MarkdownViewMode::Preview,
+                        crate::state::MarkdownViewMode::Preview => crate::state::MarkdownViewMode::Editor,
+                    };
+                }
+            }
+        }
+
         // Ctrl+S to save current tab
         if ctx.input(|i| (i.modifiers.ctrl || i.modifiers.command) && !i.modifiers.shift && i.key_pressed(egui::Key::S)) {
             self.state.save_active_tab();

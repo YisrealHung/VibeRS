@@ -22,9 +22,10 @@
 - **模型配額與用量統計**：模型選擇清單即時顯示剩餘配額（如 `50/50`、`150/150`、`Unlimited`），底欄按鈕即時標註使用率。
 - **專案環境感知**：發送 Prompt 時自動附加當前開啟專案的上下文指引與關聯檔案（支援 `@檔案` 標註）。
 
-### 2. 📝 高效能程式碼編輯器
+### 2. 📝 高效能程式碼編輯器與 Markdown 預覽
 - **多分頁管理**：支援多檔案分頁切換、儲存提示符號（`*`）、未儲存關閉確認。
-- **多語言語法高亮**：內建 Rust、Python、JavaScript、TypeScript、C/C++、Java、C#、Go、HTML、SQL、JSON、Markdown、TOML 等程式語言的高速語法著色。
+- **多語言語法高亮**：內建 Rust、Python、JavaScript、TypeScript、C/C++、Java、C#、Go、HTML、SQL、Markdown (`.md`)、JSON、TOML 等程式語言的高速語法著色。
+- **Markdown 深度預覽與分割視圖**：開啟 Markdown 檔案時，麵包屑工具列提供 `[ ✏ 編輯 | ◫ 分割 | 👁 預覽 ]` 三種檢視模式，支援左右雙向同步即時渲染（Split View）與表格、核取清單（`☑`/`☐`）、程式碼區塊語法著色。支援快捷鍵 `Ctrl + Shift + V` 快速循環切換。
 - **虛擬滾動技術**：編輯區採用動態虛擬渲染，面對萬行大型程式碼仍能維持 60 FPS 順暢滾動。
 - **Windows IME 優化**：完美支援微軟繁體/簡體中文輸入法選字流程，解決候選字 Enter 確認誤觸換行的問題。
 
@@ -78,6 +79,7 @@ cargo build --release
 | `Ctrl + N` | 新增檔案 |
 | `Ctrl + S` | 儲存當前檔案 |
 | `Ctrl + W` | 關閉當前分頁 |
+| `Ctrl + Shift + V` | 切換 Markdown 模式（編輯 / 分割 / 預覽） |
 | `Ctrl + Enter` | 發送 AI 對話指令 |
 
 ---
@@ -85,3 +87,4 @@ cargo build --release
 ## 📄 授權條款
 
 本專案採用 [MIT License](LICENSE) 授權。
+

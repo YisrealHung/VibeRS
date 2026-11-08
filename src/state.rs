@@ -13,6 +13,14 @@ pub struct TreeNode {
     pub children: Vec<TreeNode>,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum MarkdownViewMode {
+    #[default]
+    Editor,
+    Split,
+    Preview,
+}
+
 #[derive(Clone, Debug)]
 pub struct OpenTab {
     pub name: String,
@@ -22,7 +30,15 @@ pub struct OpenTab {
     pub disk_snapshot: String,
     pub is_dirty: bool,
     pub show_diff: bool,
+    pub markdown_mode: MarkdownViewMode,
     pub last_disk_modified: Option<std::time::SystemTime>,
+}
+
+impl OpenTab {
+    pub fn is_markdown(&self) -> bool {
+        let l = self.name.to_lowercase();
+        l.ends_with(".md") || l.ends_with(".markdown")
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -395,6 +411,7 @@ impl AppState {
             disk_snapshot: content,
             is_dirty: false,
             show_diff: false,
+            markdown_mode: MarkdownViewMode::default(),
             last_disk_modified,
         });
         self.active_tab_idx = self.open_tabs.len() - 1;

@@ -1,4 +1,4 @@
-﻿use crate::diff::{accept_hunk_in_snapshot, compute_hunks, revert_hunk_in_text, DiffOpKind};
+use crate::diff::{accept_hunk_in_snapshot, compute_hunks, revert_hunk_in_text, DiffOpKind};
 use crate::state::AppState;
 use crate::theme::Palette;
 use egui::{
@@ -76,8 +76,62 @@ pub fn render_center_panel(ctx: &egui::Context, state: &mut AppState) {
                                 );
                             }
 
-                            // Right-aligned Diff Toggle
+                            // Right-aligned Diff Toggle & Markdown Mode Toggles
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                if tab.is_markdown() {
+                                    let is_prev = tab.markdown_mode == crate::state::MarkdownViewMode::Preview;
+                                    if ui
+                                        .selectable_label(
+                                            is_prev,
+                                            RichText::new("👁 預覽 (Preview)")
+                                                .size(11.5)
+                                                .color(if is_prev { Palette::ACCENT() } else { Palette::TEXT_MUTED() }),
+                                        )
+                                        .on_hover_text("完整 Markdown 預覽模式")
+                                        .clicked()
+                                    {
+                                        tab.markdown_mode = if is_prev {
+                                            crate::state::MarkdownViewMode::Editor
+                                        } else {
+                                            crate::state::MarkdownViewMode::Preview
+                                        };
+                                    }
+
+                                    let is_split = tab.markdown_mode == crate::state::MarkdownViewMode::Split;
+                                    if ui
+                                        .selectable_label(
+                                            is_split,
+                                            RichText::new("◫ 分割 (Split)")
+                                                .size(11.5)
+                                                .color(if is_split { Palette::ACCENT() } else { Palette::TEXT_MUTED() }),
+                                        )
+                                        .on_hover_text("左右分割預覽 (即時雙向同步)")
+                                        .clicked()
+                                    {
+                                        tab.markdown_mode = if is_split {
+                                            crate::state::MarkdownViewMode::Editor
+                                        } else {
+                                            crate::state::MarkdownViewMode::Split
+                                        };
+                                    }
+
+                                    let is_edit = tab.markdown_mode == crate::state::MarkdownViewMode::Editor;
+                                    if ui
+                                        .selectable_label(
+                                            is_edit,
+                                            RichText::new("✏ 編輯 (Edit)")
+                                                .size(11.5)
+                                                .color(if is_edit { Palette::ACCENT() } else { Palette::TEXT_MUTED() }),
+                                        )
+                                        .on_hover_text("原始碼編輯模式")
+                                        .clicked()
+                                    {
+                                        tab.markdown_mode = crate::state::MarkdownViewMode::Editor;
+                                    }
+
+                                    ui.separator();
+                                }
+
                                 if has_diff {
                                     let diff_label = if tab.show_diff { "Code 模式" } else { "⚡ Diff 模式" };
                                     if ui
@@ -97,8 +151,12 @@ pub fn render_center_panel(ctx: &egui::Context, state: &mut AppState) {
                     }
                 });
 
-            // 3. Code Editor Area or Inline Diff Area
+            // 3. Code Editor Area, Markdown Preview, or Inline Diff Area
             let is_showing_diff = state.active_tab().map(|t| t.show_diff).unwrap_or(false);
+            let md_mode = state
+                .active_tab()
+                .map(|t| (t.is_markdown(), t.markdown_mode))
+                .unwrap_or((false, crate::state::MarkdownViewMode::Editor));
 
             egui::CentralPanel::default()
                 .frame(
@@ -114,6 +172,12 @@ pub fn render_center_panel(ctx: &egui::Context, state: &mut AppState) {
                 .show_inside(ui, |ui| {
                     if is_showing_diff {
                         render_inline_diff_view(ui, state, &mut tab_action_accept_hunk, &mut tab_action_revert_hunk);
+                    } else if md_mode.0 && md_mode.1 == crate::state::MarkdownViewMode::Preview {
+                        if let Some(tab) = state.active_tab() {
+                            render_markdown_preview_view(ui, &tab.content);
+                        }
+                    } else if md_mode.0 && md_mode.1 == crate::state::MarkdownViewMode::Split {
+                        render_markdown_split_view(ui, state);
                     } else {
                         render_code_editor_view(ui, state);
                     }
@@ -198,6 +262,61 @@ fn render_code_editor_view(ui: &mut egui::Ui, state: &mut AppState) {
                 });
             }
         });
+}
+
+fn render_markdown_preview_view(ui: &mut egui::Ui, content: &str) {
+    egui::ScrollArea::vertical()
+        .id_salt("center_markdown_preview_scroll")
+        .auto_shrink([false, false])
+        .show(ui, |ui| {
+            Frame::NONE
+                .fill(Palette::BG_EDITOR())
+                .inner_margin(Margin::symmetric(24, 16))
+                .show(ui, |ui| {
+                    ui.set_max_width(900.0);
+                    crate::ui::markdown::render_markdown_message(ui, content);
+                });
+        });
+}
+
+fn render_markdown_split_view(ui: &mut egui::Ui, state: &mut AppState) {
+    let avail_width = ui.available_width();
+    let col_w = ((avail_width - 12.0) * 0.5).max(100.0);
+
+    ui.horizontal_top(|ui| {
+        // Left Column: Code Editor
+        ui.allocate_ui_with_layout(
+            egui::vec2(col_w, ui.available_height()),
+            egui::Layout::top_down(egui::Align::Min),
+            |ui| {
+                render_code_editor_view(ui, state);
+            },
+        );
+
+        // Vertical divider
+        ui.separator();
+
+        // Right Column: Live Rendered Preview
+        ui.allocate_ui_with_layout(
+            egui::vec2(col_w, ui.available_height()),
+            egui::Layout::top_down(egui::Align::Min),
+            |ui| {
+                if let Some(tab) = state.active_tab() {
+                    egui::ScrollArea::vertical()
+                        .id_salt("center_markdown_split_preview_scroll")
+                        .auto_shrink([false, false])
+                        .show(ui, |ui| {
+                            Frame::NONE
+                                .fill(Palette::BG_EDITOR())
+                                .inner_margin(Margin::symmetric(16, 12))
+                                .show(ui, |ui| {
+                                    crate::ui::markdown::render_markdown_message(ui, &tab.content);
+                                });
+                        });
+                }
+            },
+        );
+    });
 }
 
 fn render_inline_diff_view(
