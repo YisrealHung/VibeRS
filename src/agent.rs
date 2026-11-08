@@ -83,7 +83,11 @@ impl AgentTask {
                                 break;
                             }
                             output_received = true;
-                            let _ = tx.send(AgentEvent::Chunk(format!("{line}\n")));
+                            let clean_line: String = line
+                                .chars()
+                                .filter(|&c| c == '\t' || !c.is_control())
+                                .collect();
+                            let _ = tx.send(AgentEvent::Chunk(format!("{clean_line}\n")));
                         }
                     }
 

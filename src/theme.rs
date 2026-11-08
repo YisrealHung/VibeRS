@@ -1,31 +1,221 @@
 use egui::{Color32, CornerRadius, FontData, FontDefinitions, FontFamily, Stroke, Style, Visuals};
+use std::sync::atomic::{AtomicU8, Ordering};
 
-/// Clean Modern Dark Palette (Antigravity / Cursor Minimalist Style)
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ThemeMode {
+    Dark,
+    Light,
+}
+
+static CURRENT_THEME: AtomicU8 = AtomicU8::new(0); // 0 = Dark, 1 = Light
+
+pub fn get_theme_mode() -> ThemeMode {
+    match CURRENT_THEME.load(Ordering::Relaxed) {
+        1 => ThemeMode::Light,
+        _ => ThemeMode::Dark,
+    }
+}
+
+pub fn set_theme_mode(mode: ThemeMode) {
+    let val = match mode {
+        ThemeMode::Dark => 0,
+        ThemeMode::Light => 1,
+    };
+    CURRENT_THEME.store(val, Ordering::Relaxed);
+}
+
+/// Dynamic Theme Palette supporting both Dark and Light modes (Antigravity Minimalist Style)
 pub struct Palette;
 
 impl Palette {
-    pub const BG_SIDEBAR: Color32 = Color32::from_rgb(20, 20, 23);    // #141417
-    pub const BG_EDITOR: Color32 = Color32::from_rgb(26, 26, 30);     // #1A1A1E
-    pub const BG_TAB_BAR: Color32 = Color32::from_rgb(17, 17, 20);    // #111114
-    pub const BG_INPUT: Color32 = Color32::from_rgb(32, 32, 37);      // #202025
-    pub const BG_HOVER: Color32 = Color32::from_rgb(38, 38, 44);      // #26262C
-    pub const BG_SELECTED: Color32 = Color32::from_rgb(45, 46, 56);   // #2D2E38
+    pub fn bg_sidebar() -> Color32 {
+        if get_theme_mode() == ThemeMode::Light {
+            Color32::from_rgb(243, 244, 246) // #F3F4F6
+        } else {
+            Color32::from_rgb(20, 20, 23) // #141417
+        }
+    }
 
-    pub const BORDER: Color32 = Color32::from_rgb(42, 42, 48);        // #2A2A30
+    pub fn bg_editor() -> Color32 {
+        if get_theme_mode() == ThemeMode::Light {
+            Color32::from_rgb(255, 255, 255) // #FFFFFF
+        } else {
+            Color32::from_rgb(26, 26, 30) // #1A1A1E
+        }
+    }
 
-    pub const TEXT_PRIMARY: Color32 = Color32::from_rgb(228, 228, 234); // #E4E4EA
-    pub const TEXT_MUTED: Color32 = Color32::from_rgb(142, 142, 154);   // #8E8E9A
-    pub const TEXT_DIM: Color32 = Color32::from_rgb(92, 92, 104);       // #5C5C68
+    pub fn bg_tab_bar() -> Color32 {
+        if get_theme_mode() == ThemeMode::Light {
+            Color32::from_rgb(235, 236, 240) // #EBECF0
+        } else {
+            Color32::from_rgb(17, 17, 20) // #111114
+        }
+    }
 
-    pub const ACCENT: Color32 = Color32::from_rgb(110, 145, 245);       // #6E91F5
-    pub const GREEN: Color32 = Color32::from_rgb(115, 195, 130);
-    pub const AMBER: Color32 = Color32::from_rgb(225, 175, 105);
+    pub fn bg_input() -> Color32 {
+        if get_theme_mode() == ThemeMode::Light {
+            Color32::from_rgb(240, 241, 245)
+        } else {
+            Color32::from_rgb(32, 32, 37) // #202025
+        }
+    }
+
+    pub fn bg_hover() -> Color32 {
+        if get_theme_mode() == ThemeMode::Light {
+            Color32::from_rgb(228, 230, 236)
+        } else {
+            Color32::from_rgb(38, 38, 44) // #26262C
+        }
+    }
+
+    pub fn bg_selected() -> Color32 {
+        if get_theme_mode() == ThemeMode::Light {
+            Color32::from_rgb(218, 222, 235)
+        } else {
+            Color32::from_rgb(45, 46, 56) // #2D2E38
+        }
+    }
+
+    pub fn border() -> Color32 {
+        if get_theme_mode() == ThemeMode::Light {
+            Color32::from_rgb(216, 218, 226) // #D8DAE2
+        } else {
+            Color32::from_rgb(42, 42, 48) // #2A2A30
+        }
+    }
+
+    pub fn text_primary() -> Color32 {
+        if get_theme_mode() == ThemeMode::Light {
+            Color32::from_rgb(25, 26, 32)
+        } else {
+            Color32::from_rgb(228, 228, 234) // #E4E4EA
+        }
+    }
+
+    pub fn text_muted() -> Color32 {
+        if get_theme_mode() == ThemeMode::Light {
+            Color32::from_rgb(105, 108, 120)
+        } else {
+            Color32::from_rgb(142, 142, 154) // #8E8E9A
+        }
+    }
+
+    pub fn text_dim() -> Color32 {
+        if get_theme_mode() == ThemeMode::Light {
+            Color32::from_rgb(148, 150, 162)
+        } else {
+            Color32::from_rgb(92, 92, 104) // #5C5C68
+        }
+    }
+
+    pub fn accent() -> Color32 {
+        if get_theme_mode() == ThemeMode::Light {
+            Color32::from_rgb(30, 95, 230) // #1E5FE6
+        } else {
+            Color32::from_rgb(110, 145, 245) // #6E91F5
+        }
+    }
+
+    pub fn green() -> Color32 {
+        if get_theme_mode() == ThemeMode::Light {
+            Color32::from_rgb(35, 140, 60)
+        } else {
+            Color32::from_rgb(115, 195, 130)
+        }
+    }
+
+    pub fn amber() -> Color32 {
+        if get_theme_mode() == ThemeMode::Light {
+            Color32::from_rgb(195, 110, 20)
+        } else {
+            Color32::from_rgb(225, 175, 105)
+        }
+    }
 
     // Syntax colors
-    pub const SYN_KEYWORD: Color32 = Color32::from_rgb(198, 145, 235);
-    pub const SYN_STRING: Color32 = Color32::from_rgb(152, 195, 121);
-    pub const SYN_COMMENT: Color32 = Color32::from_rgb(100, 106, 120);
-    pub const SYN_TYPE: Color32 = Color32::from_rgb(120, 185, 240);
+    pub fn syn_keyword() -> Color32 {
+        if get_theme_mode() == ThemeMode::Light {
+            Color32::from_rgb(145, 35, 175)
+        } else {
+            Color32::from_rgb(198, 145, 235)
+        }
+    }
+
+    pub fn syn_string() -> Color32 {
+        if get_theme_mode() == ThemeMode::Light {
+            Color32::from_rgb(35, 125, 55)
+        } else {
+            Color32::from_rgb(152, 195, 121)
+        }
+    }
+
+    pub fn syn_comment() -> Color32 {
+        if get_theme_mode() == ThemeMode::Light {
+            Color32::from_rgb(125, 130, 142)
+        } else {
+            Color32::from_rgb(100, 106, 120)
+        }
+    }
+
+    pub fn syn_type() -> Color32 {
+        if get_theme_mode() == ThemeMode::Light {
+            Color32::from_rgb(15, 110, 185)
+        } else {
+            Color32::from_rgb(120, 185, 240)
+        }
+    }
+
+    pub fn user_bubble_fill() -> Color32 {
+        if get_theme_mode() == ThemeMode::Light {
+            Color32::from_rgb(230, 233, 242)
+        } else {
+            Color32::from_rgb(44, 45, 52)
+        }
+    }
+
+    pub fn user_bubble_border() -> Color32 {
+        if get_theme_mode() == ThemeMode::Light {
+            Color32::from_rgb(205, 210, 225)
+        } else {
+            Color32::from_rgb(64, 66, 76)
+        }
+    }
+
+    // UPPERCASE helper functions for backwards-compatible call sites
+    #[allow(non_snake_case, dead_code)]
+    pub fn BG_SIDEBAR() -> Color32 { Self::bg_sidebar() }
+    #[allow(non_snake_case, dead_code)]
+    pub fn BG_EDITOR() -> Color32 { Self::bg_editor() }
+    #[allow(non_snake_case, dead_code)]
+    pub fn BG_TAB_BAR() -> Color32 { Self::bg_tab_bar() }
+    #[allow(non_snake_case, dead_code)]
+    pub fn BG_INPUT() -> Color32 { Self::bg_input() }
+    #[allow(non_snake_case, dead_code)]
+    pub fn BG_HOVER() -> Color32 { Self::bg_hover() }
+    #[allow(non_snake_case, dead_code)]
+    pub fn BG_SELECTED() -> Color32 { Self::bg_selected() }
+    #[allow(non_snake_case, dead_code)]
+    pub fn BORDER() -> Color32 { Self::border() }
+    #[allow(non_snake_case, dead_code)]
+    pub fn TEXT_PRIMARY() -> Color32 { Self::text_primary() }
+    #[allow(non_snake_case, dead_code)]
+    pub fn TEXT_MUTED() -> Color32 { Self::text_muted() }
+    #[allow(non_snake_case, dead_code)]
+    pub fn TEXT_DIM() -> Color32 { Self::text_dim() }
+    #[allow(non_snake_case, dead_code)]
+    pub fn ACCENT() -> Color32 { Self::accent() }
+    #[allow(non_snake_case, dead_code)]
+    pub fn GREEN() -> Color32 { Self::green() }
+    #[allow(non_snake_case, dead_code)]
+    pub fn AMBER() -> Color32 { Self::amber() }
+    #[allow(non_snake_case, dead_code)]
+    pub fn SYN_KEYWORD() -> Color32 { Self::syn_keyword() }
+    #[allow(non_snake_case, dead_code)]
+    pub fn SYN_STRING() -> Color32 { Self::syn_string() }
+    #[allow(non_snake_case, dead_code)]
+    pub fn SYN_COMMENT() -> Color32 { Self::syn_comment() }
+    #[allow(non_snake_case, dead_code)]
+    pub fn SYN_TYPE() -> Color32 { Self::syn_type() }
 }
 
 pub fn configure_fonts(ctx: &egui::Context) -> String {
@@ -53,12 +243,13 @@ pub fn configure_fonts(ctx: &egui::Context) -> String {
         }
     }
 
-    let cjk_candidates = [
-        ("NotoSansTC", r"C:\Windows\Fonts\NotoSansTC-VF.ttf"),
-        ("MicrosoftJhengHeiLight", r"C:\Windows\Fonts\msjhl.ttc"),
+    // Load both Traditional and Simplified Chinese fonts to ensure 100% glyph coverage
+    let cjk_fonts = [
         ("MicrosoftJhengHei", r"C:\Windows\Fonts\msjh.ttc"),
+        ("MicrosoftYaHei", r"C:\Windows\Fonts\msyh.ttc"),
+        ("NotoSansTC", r"C:\Windows\Fonts\NotoSansTC-VF.ttf"),
     ];
-    for (name, path) in cjk_candidates {
+    for (name, path) in cjk_fonts {
         if let Ok(bytes) = std::fs::read(path) {
             let leaked: &'static [u8] = Box::leak(bytes.into_boxed_slice());
             fonts
@@ -71,7 +262,6 @@ pub fn configure_fonts(ctx: &egui::Context) -> String {
                 vec.push(name.to_owned());
             }
             loaded_info.push(name.to_string());
-            break;
         }
     }
 
@@ -80,41 +270,45 @@ pub fn configure_fonts(ctx: &egui::Context) -> String {
 }
 
 pub fn apply_vibers_theme(ctx: &egui::Context) {
+    let mode = get_theme_mode();
     let mut style = Style::default();
-    let mut visuals = Visuals::dark();
+    let mut visuals = match mode {
+        ThemeMode::Dark => Visuals::dark(),
+        ThemeMode::Light => Visuals::light(),
+    };
 
-    visuals.panel_fill = Palette::BG_SIDEBAR;
-    visuals.window_fill = Palette::BG_EDITOR;
-    visuals.extreme_bg_color = Palette::BG_TAB_BAR;
-    visuals.faint_bg_color = Palette::BG_EDITOR;
-    visuals.code_bg_color = Palette::BG_EDITOR;
+    visuals.panel_fill = Palette::bg_sidebar();
+    visuals.window_fill = Palette::bg_editor();
+    visuals.extreme_bg_color = Palette::bg_tab_bar();
+    visuals.faint_bg_color = Palette::bg_editor();
+    visuals.code_bg_color = Palette::bg_editor();
 
-    visuals.override_text_color = Some(Palette::TEXT_PRIMARY);
-    visuals.window_stroke = Stroke::new(1.0, Palette::BORDER);
+    visuals.override_text_color = Some(Palette::text_primary());
+    visuals.window_stroke = Stroke::new(1.0, Palette::border());
 
     let radius = CornerRadius::same(4);
-    visuals.widgets.noninteractive.bg_fill = Palette::BG_SIDEBAR;
-    visuals.widgets.noninteractive.bg_stroke = Stroke::new(1.0, Palette::BORDER);
-    visuals.widgets.noninteractive.fg_stroke = Stroke::new(1.0, Palette::TEXT_PRIMARY);
+    visuals.widgets.noninteractive.bg_fill = Palette::bg_sidebar();
+    visuals.widgets.noninteractive.bg_stroke = Stroke::new(1.0, Palette::border());
+    visuals.widgets.noninteractive.fg_stroke = Stroke::new(1.0, Palette::text_primary());
     visuals.widgets.noninteractive.corner_radius = radius;
 
-    visuals.widgets.inactive.bg_fill = Palette::BG_INPUT;
-    visuals.widgets.inactive.bg_stroke = Stroke::new(1.0, Palette::BORDER);
-    visuals.widgets.inactive.fg_stroke = Stroke::new(1.0, Palette::TEXT_PRIMARY);
+    visuals.widgets.inactive.bg_fill = Palette::bg_input();
+    visuals.widgets.inactive.bg_stroke = Stroke::new(1.0, Palette::border());
+    visuals.widgets.inactive.fg_stroke = Stroke::new(1.0, Palette::text_primary());
     visuals.widgets.inactive.corner_radius = radius;
 
-    visuals.widgets.hovered.bg_fill = Palette::BG_HOVER;
-    visuals.widgets.hovered.bg_stroke = Stroke::new(1.0, Palette::BORDER);
-    visuals.widgets.hovered.fg_stroke = Stroke::new(1.0, Color32::WHITE);
+    visuals.widgets.hovered.bg_fill = Palette::bg_hover();
+    visuals.widgets.hovered.bg_stroke = Stroke::new(1.0, Palette::border());
+    visuals.widgets.hovered.fg_stroke = Stroke::new(1.0, Palette::text_primary());
     visuals.widgets.hovered.corner_radius = radius;
 
-    visuals.widgets.active.bg_fill = Palette::BG_SELECTED;
-    visuals.widgets.active.bg_stroke = Stroke::new(1.0, Palette::ACCENT);
-    visuals.widgets.active.fg_stroke = Stroke::new(1.0, Color32::WHITE);
+    visuals.widgets.active.bg_fill = Palette::bg_selected();
+    visuals.widgets.active.bg_stroke = Stroke::new(1.0, Palette::accent());
+    visuals.widgets.active.fg_stroke = Stroke::new(1.0, Palette::text_primary());
     visuals.widgets.active.corner_radius = radius;
 
-    visuals.selection.bg_fill = Palette::ACCENT.gamma_multiply(0.25);
-    visuals.selection.stroke = Stroke::new(1.0, Palette::ACCENT);
+    visuals.selection.bg_fill = Palette::accent().gamma_multiply(0.25);
+    visuals.selection.stroke = Stroke::new(1.0, Palette::accent());
 
     style.visuals = visuals;
     style.spacing.item_spacing = egui::vec2(6.0, 4.0);

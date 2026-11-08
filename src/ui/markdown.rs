@@ -1,4 +1,4 @@
-use crate::theme::Palette;
+﻿use crate::theme::Palette;
 use egui::{text::LayoutJob, Color32, CornerRadius, FontId, Frame, Margin, RichText, Stroke, TextFormat, Ui};
 
 /// Render beautiful Markdown blocks like Antigravity IDE
@@ -43,13 +43,13 @@ pub fn render_markdown_message(ui: &mut Ui, markdown: &str) {
         // 3. Headings (# H1, ## H2, ### H3, #### H4)
         if let Some(rest) = line.strip_prefix("#### ") {
             ui.add_space(8.0);
-            ui.label(RichText::new(clean_markdown_inline(rest)).size(13.0).strong().color(Palette::TEXT_PRIMARY));
+            ui.label(RichText::new(clean_markdown_inline(rest)).size(13.0).strong().color(Palette::TEXT_PRIMARY()));
             ui.add_space(4.0);
             continue;
         }
         if let Some(rest) = line.strip_prefix("### ") {
             ui.add_space(10.0);
-            ui.label(RichText::new(clean_markdown_inline(rest)).size(14.0).strong().color(Palette::ACCENT));
+            ui.label(RichText::new(clean_markdown_inline(rest)).size(14.0).strong().color(Palette::ACCENT()));
             ui.add_space(4.0);
             continue;
         }
@@ -61,7 +61,7 @@ pub fn render_markdown_message(ui: &mut Ui, markdown: &str) {
         }
         if let Some(rest) = line.strip_prefix("# ") {
             ui.add_space(14.0);
-            ui.label(RichText::new(clean_markdown_inline(rest)).size(17.0).strong().color(Palette::ACCENT));
+            ui.label(RichText::new(clean_markdown_inline(rest)).size(17.0).strong().color(Palette::ACCENT()));
             ui.add_space(6.0);
             continue;
         }
@@ -70,12 +70,12 @@ pub fn render_markdown_message(ui: &mut Ui, markdown: &str) {
         if let Some(rest) = line.strip_prefix("> ") {
             ui.add_space(4.0);
             Frame::NONE
-                .fill(Palette::BG_INPUT.gamma_multiply(0.4))
-                .stroke(Stroke::new(1.0, Palette::BORDER))
+                .fill(Palette::BG_INPUT().gamma_multiply(0.4))
+                .stroke(Stroke::new(1.0, Palette::BORDER()))
                 .corner_radius(CornerRadius::same(4))
                 .inner_margin(Margin::symmetric(10, 6))
                 .show(ui, |ui| {
-                    ui.label(RichText::new(clean_markdown_inline(rest)).size(12.0).color(Palette::TEXT_MUTED));
+                    ui.label(RichText::new(clean_markdown_inline(rest)).size(12.0).color(Palette::TEXT_MUTED()));
                 });
             ui.add_space(4.0);
             continue;
@@ -96,7 +96,7 @@ pub fn render_markdown_message(ui: &mut Ui, markdown: &str) {
 
             ui.add_space(1.0);
             ui.horizontal_top(|ui| {
-                ui.label(RichText::new(bullet).monospace().size(12.0).color(Palette::ACCENT));
+                ui.label(RichText::new(bullet).monospace().size(12.0).color(Palette::ACCENT()));
                 render_formatted_inline_text(ui, text);
             });
             ui.add_space(3.0);
@@ -121,18 +121,18 @@ pub fn render_markdown_message(ui: &mut Ui, markdown: &str) {
 fn render_code_card(ui: &mut Ui, lang: &str, code: &str) {
     ui.add_space(6.0);
     Frame::NONE
-        .fill(Palette::BG_EDITOR)
-        .stroke(Stroke::new(1.0, Palette::BORDER))
+        .fill(Palette::BG_EDITOR())
+        .stroke(Stroke::new(1.0, Palette::BORDER()))
         .corner_radius(CornerRadius::same(6))
         .inner_margin(Margin::ZERO)
         .show(ui, |ui| {
             // Header bar
             if !lang.is_empty() {
                 Frame::NONE
-                    .fill(Palette::BG_TAB_BAR)
+                    .fill(Palette::BG_TAB_BAR())
                     .inner_margin(Margin::symmetric(10, 4))
                     .show(ui, |ui| {
-                        ui.label(RichText::new(lang).monospace().size(11.0).color(Palette::TEXT_DIM));
+                        ui.label(RichText::new(lang).monospace().size(11.0).color(Palette::TEXT_DIM()));
                     });
             }
 
@@ -142,7 +142,7 @@ fn render_code_card(ui: &mut Ui, lang: &str, code: &str) {
                     ui.label(
                         RichText::new(code.trim_end())
                             .font(FontId::monospace(12.0))
-                            .color(Palette::TEXT_PRIMARY),
+                            .color(Palette::TEXT_PRIMARY()),
                     );
                 });
         });
@@ -164,7 +164,7 @@ fn render_formatted_inline_text(ui: &mut Ui, raw: &str) {
                     0.0,
                     TextFormat {
                         font_id: normal_font.clone(),
-                        color: Palette::TEXT_MUTED,
+                        color: Palette::TEXT_MUTED(),
                         ..Default::default()
                     },
                 );
@@ -186,8 +186,8 @@ fn render_formatted_inline_text(ui: &mut Ui, raw: &str) {
                     0.0,
                     TextFormat {
                         font_id: mono_font.clone(),
-                        color: Palette::ACCENT,
-                        background: Palette::BG_INPUT,
+                        color: Palette::ACCENT(),
+                        background: Palette::BG_INPUT(),
                         ..Default::default()
                     },
                 );

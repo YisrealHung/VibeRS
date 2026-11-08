@@ -1,4 +1,4 @@
-use crate::theme::Palette;
+﻿use crate::theme::Palette;
 use egui::{
     text::LayoutJob,
     Color32, FontId, TextFormat,
@@ -156,7 +156,7 @@ pub fn highlight_code(text: &str, lang: Language) -> LayoutJob {
             0.0,
             TextFormat {
                 font_id,
-                color: Palette::TEXT_PRIMARY,
+                color: Palette::TEXT_PRIMARY(),
                 ..Default::default()
             },
         );
@@ -172,7 +172,7 @@ pub fn highlight_code(text: &str, lang: Language) -> LayoutJob {
                 0.0,
                 TextFormat {
                     font_id: font_id.clone(),
-                    color: Palette::TEXT_PRIMARY,
+                    color: Palette::TEXT_PRIMARY(),
                     ..Default::default()
                 },
             );
@@ -191,7 +191,7 @@ pub fn highlight_code(text: &str, lang: Language) -> LayoutJob {
                 0.0,
                 TextFormat {
                     font_id: font_id.clone(),
-                    color: Palette::SYN_COMMENT,
+                    color: Palette::SYN_COMMENT(),
                     ..Default::default()
                 },
             );
@@ -221,7 +221,7 @@ pub fn highlight_code(text: &str, lang: Language) -> LayoutJob {
                     0.0,
                     TextFormat {
                         font_id: font_id.clone(),
-                        color: Palette::SYN_STRING,
+                        color: Palette::SYN_STRING(),
                         ..Default::default()
                     },
                 );
@@ -233,7 +233,7 @@ pub fn highlight_code(text: &str, lang: Language) -> LayoutJob {
                     0.0,
                     TextFormat {
                         font_id: font_id.clone(),
-                        color: Palette::ACCENT,
+                        color: Palette::ACCENT(),
                         ..Default::default()
                     },
                 );
@@ -254,11 +254,11 @@ pub fn highlight_code(text: &str, lang: Language) -> LayoutJob {
                     keywords.contains(&word)
                 };
                 let color = if is_kw {
-                    Palette::SYN_KEYWORD
+                    Palette::SYN_KEYWORD()
                 } else if word.chars().next().is_some_and(|c| c.is_uppercase()) {
-                    Palette::SYN_TYPE
+                    Palette::SYN_TYPE()
                 } else {
-                    Palette::TEXT_PRIMARY
+                    Palette::TEXT_PRIMARY()
                 };
                 job.append(
                     word,
@@ -296,7 +296,7 @@ pub fn highlight_code(text: &str, lang: Language) -> LayoutJob {
                     0.0,
                     TextFormat {
                         font_id: font_id.clone(),
-                        color: Palette::TEXT_PRIMARY,
+                        color: Palette::TEXT_PRIMARY(),
                         ..Default::default()
                     },
                 );

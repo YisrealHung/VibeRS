@@ -1,4 +1,4 @@
-use crate::state::AppState;
+﻿use crate::state::AppState;
 use crate::theme::Palette;
 use egui::{Frame, Margin, RichText};
 
@@ -7,7 +7,7 @@ pub fn render_bottom_bar(ctx: &egui::Context, state: &mut AppState) {
         .exact_height(22.0)
         .frame(
             Frame::NONE
-                .fill(Palette::BG_TAB_BAR)
+                .fill(Palette::BG_TAB_BAR())
                 .inner_margin(Margin::symmetric(12, 0)),
         )
         .show(ctx, |ui| {
@@ -15,7 +15,7 @@ pub fn render_bottom_bar(ctx: &egui::Context, state: &mut AppState) {
                 ui.label(
                     RichText::new(&state.status_text)
                         .size(11.0)
-                        .color(Palette::TEXT_MUTED),
+                        .color(Palette::TEXT_MUTED()),
                 );
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -24,7 +24,7 @@ pub fn render_bottom_bar(ctx: &egui::Context, state: &mut AppState) {
                         RichText::new(format!("RAM: {:.1} MB", mem.working_set_mb))
                             .monospace()
                             .size(11.0)
-                            .color(Palette::GREEN),
+                            .color(Palette::GREEN()),
                     )
                     .on_hover_text(format!(
                         "Working Set: {:.1} MB | Private: {:.1} MB",
@@ -38,7 +38,7 @@ pub fn render_bottom_bar(ctx: &egui::Context, state: &mut AppState) {
                         ui.label(
                             RichText::new(format!("{lines} lines  ·  UTF-8"))
                                 .size(11.0)
-                                .color(Palette::TEXT_DIM),
+                                .color(Palette::TEXT_DIM()),
                         );
                     }
                 });

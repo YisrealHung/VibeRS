@@ -1,4 +1,4 @@
-use crate::state::{AppState, FileOpModal, TreeNode};
+﻿use crate::state::{AppState, FileOpModal, TreeNode};
 use crate::theme::Palette;
 use egui::{Color32, CornerRadius, Frame, Key, Margin, RichText, Stroke};
 use std::path::PathBuf;
@@ -10,7 +10,7 @@ pub fn render_left_panel(ctx: &egui::Context, state: &mut AppState) {
         .width_range(170.0..=450.0)
         .frame(
             Frame::NONE
-                .fill(Palette::BG_SIDEBAR)
+                .fill(Palette::BG_SIDEBAR())
                 .inner_margin(Margin::ZERO),
         )
         .show(ctx, |ui| {
@@ -19,7 +19,7 @@ pub fn render_left_panel(ctx: &egui::Context, state: &mut AppState) {
                 .exact_height(32.0)
                 .frame(
                     Frame::NONE
-                        .fill(Palette::BG_SIDEBAR)
+                        .fill(Palette::BG_SIDEBAR())
                         .inner_margin(Margin::symmetric(10, 0)),
                 )
                 .show_inside(ui, |ui| {
@@ -34,7 +34,7 @@ pub fn render_left_panel(ctx: &egui::Context, state: &mut AppState) {
                             RichText::new(header_title)
                                 .size(11.5)
                                 .strong()
-                                .color(Palette::TEXT_MUTED),
+                                .color(Palette::TEXT_MUTED()),
                         )
                         .on_hover_text(if state.workspace_root.as_os_str().is_empty() {
                             "尚未開啟任何專案資料夾".to_string()
@@ -46,7 +46,7 @@ pub fn render_left_panel(ctx: &egui::Context, state: &mut AppState) {
                             if !state.workspace_name.is_empty() {
                                 if ui
                                     .small_button(
-                                        RichText::new("↻").size(12.0).color(Palette::TEXT_MUTED),
+                                        RichText::new("↻").size(12.0).color(Palette::TEXT_MUTED()),
                                     )
                                     .on_hover_text("重新整理檔案樹")
                                     .clicked()
@@ -77,7 +77,7 @@ pub fn render_left_panel(ctx: &egui::Context, state: &mut AppState) {
             egui::CentralPanel::default()
                 .frame(
                     Frame::NONE
-                        .fill(Palette::BG_SIDEBAR)
+                        .fill(Palette::BG_SIDEBAR())
                         .inner_margin(Margin {
                             left: 8,
                             right: 6,
@@ -92,14 +92,14 @@ pub fn render_left_panel(ctx: &egui::Context, state: &mut AppState) {
                             ui.label(
                                 RichText::new("尚未開啟資料夾")
                                     .size(12.5)
-                                    .color(Palette::TEXT_DIM),
+                                    .color(Palette::TEXT_DIM()),
                             );
                             ui.add_space(8.0);
                             if ui
                                 .button(
                                     RichText::new("開啟資料夾...")
                                         .size(12.0)
-                                        .color(Palette::TEXT_PRIMARY),
+                                        .color(Palette::TEXT_PRIMARY()),
                                 )
                                 .clicked()
                             {
@@ -158,7 +158,7 @@ fn render_tree_node(
             ui.add_space(indent);
             let resp = ui.selectable_label(
                 false,
-                RichText::new(label).size(12.5).color(Palette::TEXT_PRIMARY),
+                RichText::new(label).size(12.5).color(Palette::TEXT_PRIMARY()),
             );
             if resp.clicked() {
                 node.expanded = !node.expanded;
@@ -214,13 +214,13 @@ fn render_tree_node(
                 RichText::new(&node.name).size(12.5).color(if is_selected {
                     Color32::WHITE
                 } else if is_modified {
-                    Palette::AMBER
+                    Palette::AMBER()
                 } else {
-                    Palette::TEXT_MUTED
+                    Palette::TEXT_MUTED()
                 }),
             );
             if is_modified {
-                ui.label(RichText::new("M").size(10.5).color(Palette::AMBER));
+                ui.label(RichText::new("M").size(10.5).color(Palette::AMBER()));
             }
             if resp.clicked() {
                 *file_to_open = Some((node.full_path.clone(), node.rel_path.clone()));
@@ -286,8 +286,8 @@ fn render_file_modals(ctx: &egui::Context, state: &mut AppState) {
         .fixed_size([modal_width, 140.0])
         .frame(
             Frame::NONE
-                .fill(Palette::BG_SIDEBAR)
-                .stroke(Stroke::new(1.0, Palette::BORDER))
+                .fill(Palette::BG_SIDEBAR())
+                .stroke(Stroke::new(1.0, Palette::BORDER()))
                 .corner_radius(CornerRadius::same(6))
                 .inner_margin(Margin::symmetric(14, 12)),
         )
@@ -296,7 +296,7 @@ fn render_file_modals(ctx: &egui::Context, state: &mut AppState) {
 
             match &mut modal {
                 FileOpModal::NewFile { parent_dir, input_name } => {
-                    ui.label(RichText::new("📄 新增檔案").strong().size(13.5).color(Palette::TEXT_PRIMARY));
+                    ui.label(RichText::new("📄 新增檔案").strong().size(13.5).color(Palette::TEXT_PRIMARY()));
                     ui.add_space(4.0);
                     let resp = ui.add(
                         egui::TextEdit::singleline(input_name)
@@ -334,7 +334,7 @@ fn render_file_modals(ctx: &egui::Context, state: &mut AppState) {
                     });
                 }
                 FileOpModal::NewFolder { parent_dir, input_name } => {
-                    ui.label(RichText::new("📁 新增資料夾").strong().size(13.5).color(Palette::TEXT_PRIMARY));
+                    ui.label(RichText::new("📁 新增資料夾").strong().size(13.5).color(Palette::TEXT_PRIMARY()));
                     ui.add_space(4.0);
                     let resp = ui.add(
                         egui::TextEdit::singleline(input_name)
@@ -365,7 +365,7 @@ fn render_file_modals(ctx: &egui::Context, state: &mut AppState) {
                     });
                 }
                 FileOpModal::Rename { target_path, input_name } => {
-                    ui.label(RichText::new("✏ 重新命名").strong().size(13.5).color(Palette::TEXT_PRIMARY));
+                    ui.label(RichText::new("✏ 重新命名").strong().size(13.5).color(Palette::TEXT_PRIMARY()));
                     ui.add_space(4.0);
                     let resp = ui.add(
                         egui::TextEdit::singleline(input_name)
@@ -414,10 +414,10 @@ fn render_file_modals(ctx: &egui::Context, state: &mut AppState) {
                         RichText::new(format!("確定要刪除此{item_type}嗎？"))
                             .strong()
                             .size(13.5)
-                            .color(Palette::TEXT_PRIMARY),
+                            .color(Palette::TEXT_PRIMARY()),
                     );
                     ui.add_space(2.0);
-                    ui.label(RichText::new(name).size(12.0).color(Palette::AMBER));
+                    ui.label(RichText::new(name).size(12.0).color(Palette::AMBER()));
                     ui.add_space(8.0);
                     ui.horizontal(|ui| {
                         if ui.button(RichText::new("刪除").color(Color32::from_rgb(240, 100, 100))).clicked() {
@@ -447,13 +447,13 @@ fn render_file_modals(ctx: &egui::Context, state: &mut AppState) {
                         RichText::new(format!("檔案 \"{tab_name}\" 尚未儲存"))
                             .strong()
                             .size(13.5)
-                            .color(Palette::AMBER),
+                            .color(Palette::AMBER()),
                     );
                     ui.add_space(2.0);
-                    ui.label(RichText::new("關閉前是否要儲存變更？").size(12.0).color(Palette::TEXT_MUTED));
+                    ui.label(RichText::new("關閉前是否要儲存變更？").size(12.0).color(Palette::TEXT_MUTED()));
                     ui.add_space(8.0);
                     ui.horizontal(|ui| {
-                        if ui.button(RichText::new("儲存並關閉").color(Palette::GREEN)).clicked() {
+                        if ui.button(RichText::new("儲存並關閉").color(Palette::GREEN())).clicked() {
                             if let Some(tab) = state.open_tabs.get_mut(idx) {
                                 let _ = std::fs::write(&tab.full_path, &tab.content);
                                 tab.is_dirty = false;

@@ -1,4 +1,4 @@
-use crate::state::AppState;
+﻿use crate::state::AppState;
 use crate::theme::Palette;
 use egui::{Color32, CornerRadius, Frame, Key, Margin, RichText, Stroke};
 
@@ -29,8 +29,8 @@ pub fn render_quick_open(ctx: &egui::Context, state: &mut AppState) {
         .fixed_size([window_width, 320.0])
         .frame(
             Frame::NONE
-                .fill(Palette::BG_SIDEBAR)
-                .stroke(Stroke::new(1.0, Palette::BORDER))
+                .fill(Palette::BG_SIDEBAR())
+                .stroke(Stroke::new(1.0, Palette::BORDER()))
                 .corner_radius(CornerRadius::same(6))
                 .inner_margin(Margin::symmetric(10, 8)),
         )
@@ -70,7 +70,7 @@ pub fn render_quick_open(ctx: &egui::Context, state: &mut AppState) {
 
             // Input box
             ui.horizontal(|ui| {
-                ui.label(RichText::new("🔍").size(13.0).color(Palette::TEXT_MUTED));
+                ui.label(RichText::new("🔍").size(13.0).color(Palette::TEXT_MUTED()));
                 let resp = ui.add(
                     egui::TextEdit::singleline(&mut state.quick_open.query)
                         .hint_text("搜尋檔案名稱... (Enter 開啟, Esc 取消)")
@@ -109,7 +109,7 @@ pub fn render_quick_open(ctx: &egui::Context, state: &mut AppState) {
                         ui.label(
                             RichText::new("找不到符合的檔案")
                                 .size(12.5)
-                                .color(Palette::TEXT_DIM),
+                                .color(Palette::TEXT_DIM()),
                         );
                         return;
                     }
@@ -117,7 +117,7 @@ pub fn render_quick_open(ctx: &egui::Context, state: &mut AppState) {
                     for (idx, (path, rel)) in matches.iter().enumerate() {
                         let is_sel = idx == state.quick_open.selected_index;
                         let bg = if is_sel {
-                            Palette::BG_SELECTED
+                            Palette::BG_SELECTED()
                         } else {
                             Color32::TRANSPARENT
                         };
@@ -145,7 +145,7 @@ pub fn render_quick_open(ctx: &egui::Context, state: &mut AppState) {
                                             .color(if is_sel {
                                                 Color32::WHITE
                                             } else {
-                                                Palette::TEXT_PRIMARY
+                                                Palette::TEXT_PRIMARY()
                                             }),
                                     );
 
@@ -153,7 +153,7 @@ pub fn render_quick_open(ctx: &egui::Context, state: &mut AppState) {
                                         ui.label(
                                             RichText::new(&dir)
                                                 .size(11.0)
-                                                .color(Palette::TEXT_DIM),
+                                                .color(Palette::TEXT_DIM()),
                                         );
                                     }
                                 });

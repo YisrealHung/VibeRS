@@ -1,4 +1,4 @@
-use crate::diff::{accept_hunk_in_snapshot, compute_hunks, revert_hunk_in_text, DiffOpKind};
+﻿use crate::diff::{accept_hunk_in_snapshot, compute_hunks, revert_hunk_in_text, DiffOpKind};
 use crate::state::AppState;
 use crate::theme::Palette;
 use egui::{
@@ -9,7 +9,7 @@ pub fn render_center_panel(ctx: &egui::Context, state: &mut AppState) {
     egui::CentralPanel::default()
         .frame(
             Frame::NONE
-                .fill(Palette::BG_EDITOR)
+                .fill(Palette::BG_EDITOR())
                 .inner_margin(Margin::ZERO),
         )
         .show(ctx, |ui| {
@@ -18,7 +18,7 @@ pub fn render_center_panel(ctx: &egui::Context, state: &mut AppState) {
                 .exact_height(32.0)
                 .frame(
                     Frame::NONE
-                        .fill(Palette::BG_TAB_BAR)
+                        .fill(Palette::BG_TAB_BAR())
                         .inner_margin(Margin::symmetric(6, 0)),
                 )
                 .show_inside(ui, |ui| {
@@ -27,7 +27,7 @@ pub fn render_center_panel(ctx: &egui::Context, state: &mut AppState) {
 
             if state.open_tabs.is_empty() {
                 egui::CentralPanel::default()
-                    .frame(Frame::NONE.fill(Palette::BG_EDITOR))
+                    .frame(Frame::NONE.fill(Palette::BG_EDITOR()))
                     .show_inside(ui, |ui| {
                         ui.centered_and_justified(|ui| {
                             let msg = if state.workspace_name.is_empty() {
@@ -38,7 +38,7 @@ pub fn render_center_panel(ctx: &egui::Context, state: &mut AppState) {
                             ui.label(
                                 RichText::new(msg)
                                     .size(13.5)
-                                    .color(Palette::TEXT_DIM),
+                                    .color(Palette::TEXT_DIM()),
                             );
                         });
                     });
@@ -53,7 +53,7 @@ pub fn render_center_panel(ctx: &egui::Context, state: &mut AppState) {
                 .exact_height(28.0)
                 .frame(
                     Frame::NONE
-                        .fill(Palette::BG_EDITOR)
+                        .fill(Palette::BG_EDITOR())
                         .inner_margin(Margin::symmetric(14, 0)),
                 )
                 .show_inside(ui, |ui| {
@@ -66,13 +66,13 @@ pub fn render_center_panel(ctx: &egui::Context, state: &mut AppState) {
                             ui.label(
                                 RichText::new(breadcrumb)
                                     .size(11.5)
-                                    .color(Palette::TEXT_DIM),
+                                    .color(Palette::TEXT_DIM()),
                             );
                             if is_dirty {
                                 ui.label(
                                     RichText::new("● 未儲存 (Ctrl+S)")
                                         .size(11.0)
-                                        .color(Palette::AMBER),
+                                        .color(Palette::AMBER()),
                                 );
                             }
 
@@ -85,7 +85,7 @@ pub fn render_center_panel(ctx: &egui::Context, state: &mut AppState) {
                                             tab.show_diff,
                                             RichText::new(diff_label)
                                                 .size(11.5)
-                                                .color(if tab.show_diff { Palette::ACCENT } else { Palette::AMBER }),
+                                                .color(if tab.show_diff { Palette::ACCENT() } else { Palette::AMBER() }),
                                         )
                                         .clicked()
                                     {
@@ -103,7 +103,7 @@ pub fn render_center_panel(ctx: &egui::Context, state: &mut AppState) {
             egui::CentralPanel::default()
                 .frame(
                     Frame::NONE
-                        .fill(Palette::BG_EDITOR)
+                        .fill(Palette::BG_EDITOR())
                         .inner_margin(Margin {
                             left: 0,
                             right: 6,
@@ -168,7 +168,7 @@ fn render_code_editor_view(ui: &mut egui::Ui, state: &mut AppState) {
                         egui::Label::new(
                             RichText::new(line_nums)
                                 .font(FontId::monospace(13.0))
-                                .color(Palette::TEXT_DIM),
+                                .color(Palette::TEXT_DIM()),
                         )
                         .selectable(false),
                     );
@@ -217,7 +217,7 @@ fn render_inline_diff_view(
             ui.label(
                 RichText::new("✨ 目前與磁碟快照完全相同 (無差異)")
                     .size(13.0)
-                    .color(Palette::GREEN),
+                    .color(Palette::GREEN()),
             );
         });
         return;
@@ -229,14 +229,14 @@ fn render_inline_diff_view(
         .show(ui, |ui| {
             for hunk in &hunks {
                 Frame::NONE
-                    .fill(Palette::BG_SIDEBAR)
-                    .stroke(Stroke::new(1.0, Palette::BORDER))
+                    .fill(Palette::BG_SIDEBAR())
+                    .stroke(Stroke::new(1.0, Palette::BORDER()))
                     .corner_radius(CornerRadius::same(5))
                     .inner_margin(Margin::ZERO)
                     .show(ui, |ui| {
                         // Hunk header bar
                         Frame::NONE
-                            .fill(Palette::BG_INPUT)
+                            .fill(Palette::BG_INPUT())
                             .inner_margin(Margin::symmetric(10, 5))
                             .show(ui, |ui| {
                                 ui.horizontal(|ui| {
@@ -247,7 +247,7 @@ fn render_inline_diff_view(
                                         ))
                                         .monospace()
                                         .size(11.5)
-                                        .color(Palette::TEXT_MUTED),
+                                        .color(Palette::TEXT_MUTED()),
                                     );
 
                                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -259,7 +259,7 @@ fn render_inline_diff_view(
                                         }
 
                                         if ui
-                                            .button(RichText::new("✓ Accept").size(11.5).color(Palette::GREEN))
+                                            .button(RichText::new("✓ Accept").size(11.5).color(Palette::GREEN()))
                                             .clicked()
                                         {
                                             *tab_action_accept = Some(hunk.id);
@@ -274,7 +274,7 @@ fn render_inline_diff_view(
                             .show(ui, |ui| {
                                 for line in &hunk.lines {
                                     let (bg, prefix, text_color) = match line.kind {
-                                        DiffOpKind::Equal => (Color32::TRANSPARENT, " ", Palette::TEXT_PRIMARY),
+                                        DiffOpKind::Equal => (Color32::TRANSPARENT, " ", Palette::TEXT_PRIMARY()),
                                         DiffOpKind::Delete => (
                                             Color32::from_rgba_premultiplied(70, 25, 30, 160),
                                             "-",
@@ -299,7 +299,7 @@ fn render_inline_diff_view(
                                                     RichText::new(format!("{old_no} {new_no} {prefix}"))
                                                         .monospace()
                                                         .size(12.0)
-                                                        .color(Palette::TEXT_DIM),
+                                                        .color(Palette::TEXT_DIM()),
                                                 );
 
                                                 ui.label(
@@ -332,12 +332,12 @@ fn render_tab_bar(ui: &mut egui::Ui, state: &mut AppState) {
                 for (idx, tab) in state.open_tabs.iter().enumerate() {
                     let is_active = idx == state.active_tab_idx;
                     let bg = if is_active {
-                        Palette::BG_EDITOR
+                        Palette::BG_EDITOR()
                     } else {
-                        Palette::BG_TAB_BAR
+                        Palette::BG_TAB_BAR()
                     };
                     let border_top = if is_active {
-                        Palette::ACCENT
+                        Palette::ACCENT()
                     } else {
                         Color32::TRANSPARENT
                     };
@@ -354,7 +354,7 @@ fn render_tab_bar(ui: &mut egui::Ui, state: &mut AppState) {
                         .stroke(Stroke::new(
                             1.0,
                             if is_active {
-                                Palette::BORDER
+                                Palette::BORDER()
                             } else {
                                 Color32::TRANSPARENT
                             },
@@ -365,7 +365,7 @@ fn render_tab_bar(ui: &mut egui::Ui, state: &mut AppState) {
                             let text_col = if is_active {
                                 Color32::WHITE
                             } else {
-                                Palette::TEXT_MUTED
+                                Palette::TEXT_MUTED()
                             };
 
                             let label_resp = ui.add(
@@ -382,12 +382,12 @@ fn render_tab_bar(ui: &mut egui::Ui, state: &mut AppState) {
                             }
 
                             if tab.is_dirty || tab.content != tab.disk_snapshot {
-                                ui.label(RichText::new("●").size(9.0).color(Palette::AMBER));
+                                ui.label(RichText::new("●").size(9.0).color(Palette::AMBER()));
                             }
 
                             let close_resp = ui.add(
                                 egui::Button::new(
-                                    RichText::new("×").size(12.0).color(Palette::TEXT_DIM),
+                                    RichText::new("×").size(12.0).color(Palette::TEXT_DIM()),
                                 )
                                 .frame(false),
                             );

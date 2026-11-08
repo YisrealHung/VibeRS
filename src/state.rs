@@ -466,12 +466,23 @@ impl AppState {
             content: String::new(),
         });
 
+        // Construct backend prompt with system workspace context
+        let backend_prompt = if !self.workspace_root.as_os_str().is_empty() {
+            format!(
+                "[專案環境指引：當前已開啟專案資料夾為 \"{}\"。請預設且優先針對此資料夾環境進行檔案搜尋、內容分析與程式碼修改。請一律使用繁體中文（台灣）回覆。]\n\n{}",
+                self.workspace_root.display(),
+                user_msg
+            )
+        } else {
+            format!("[請一律使用繁體中文（台灣）回覆。]\n\n{}", user_msg)
+        };
+
         // Spawn background task
         let task = AgentTask::spawn(
             self.active_provider,
             model.id,
             self.workspace_root.clone(),
-            user_msg,
+            backend_prompt,
         );
         self.active_agent_task = Some(task);
     }

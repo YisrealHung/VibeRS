@@ -7,7 +7,7 @@ pub fn render_top_bar(ctx: &egui::Context, state: &mut AppState) {
         .exact_height(30.0)
         .frame(
             Frame::NONE
-                .fill(Palette::BG_TAB_BAR)
+                .fill(Palette::BG_TAB_BAR())
                 .inner_margin(Margin::symmetric(10, 0)),
         )
         .show(ctx, |ui| {
@@ -16,14 +16,14 @@ pub fn render_top_bar(ctx: &egui::Context, state: &mut AppState) {
                     RichText::new("VibeRS")
                         .strong()
                         .size(13.0)
-                        .color(Palette::ACCENT),
+                        .color(Palette::ACCENT()),
                 );
 
                 ui.add_space(4.0);
 
                 // Only File menu in the top-left handles Open Folder & New Window
                 ui.menu_button(
-                    RichText::new("File").size(12.5).color(Palette::TEXT_PRIMARY),
+                    RichText::new("File").size(12.5).color(Palette::TEXT_PRIMARY()),
                     |ui| {
                         ui.set_min_width(210.0);
                         if ui.button("開啟資料夾 (Open Folder...)        Ctrl+O").clicked() {
@@ -47,6 +47,34 @@ pub fn render_top_bar(ctx: &egui::Context, state: &mut AppState) {
                             ui.close_menu();
                             state.save_all_tabs();
                         }
+                        ui.separator();
+                        ui.menu_button("頁面主題 (Theme)", |ui| {
+                            let cur_theme = crate::theme::get_theme_mode();
+                            if ui
+                                .selectable_label(
+                                    cur_theme == crate::theme::ThemeMode::Dark,
+                                    "🌙 黑色主題 (Dark)",
+                                )
+                                .clicked()
+                            {
+                                crate::theme::set_theme_mode(crate::theme::ThemeMode::Dark);
+                                crate::theme::apply_vibers_theme(ui.ctx());
+                                state.status_text = "已切換至黑色主題 (Dark)".to_string();
+                                ui.close_menu();
+                            }
+                            if ui
+                                .selectable_label(
+                                    cur_theme == crate::theme::ThemeMode::Light,
+                                    "☀️ 白色主題 (Light)",
+                                )
+                                .clicked()
+                            {
+                                crate::theme::set_theme_mode(crate::theme::ThemeMode::Light);
+                                crate::theme::apply_vibers_theme(ui.ctx());
+                                state.status_text = "已切換至白色主題 (Light)".to_string();
+                                ui.close_menu();
+                            }
+                        });
                     },
                 );
 
@@ -55,7 +83,7 @@ pub fn render_top_bar(ctx: &egui::Context, state: &mut AppState) {
                     ui.label(
                         RichText::new(&state.workspace_name)
                             .size(12.5)
-                            .color(Palette::TEXT_MUTED),
+                            .color(Palette::TEXT_MUTED()),
                     )
                     .on_hover_text(state.workspace_root.display().to_string());
                 }

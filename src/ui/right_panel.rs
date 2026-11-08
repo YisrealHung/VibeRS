@@ -10,7 +10,7 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
         .width_range(240.0..=620.0)
         .frame(
             Frame::NONE
-                .fill(Palette::BG_SIDEBAR)
+                .fill(Palette::BG_SIDEBAR())
                 .inner_margin(Margin::ZERO),
         )
         .show(ctx, |ui| {
@@ -19,7 +19,7 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                 .exact_height(32.0)
                 .frame(
                     Frame::NONE
-                        .fill(Palette::BG_SIDEBAR)
+                        .fill(Palette::BG_SIDEBAR())
                         .inner_margin(Margin {
                             left: 12,
                             right: 10,
@@ -39,7 +39,7 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                                         if is_active {
                                             Color32::WHITE
                                         } else {
-                                            Palette::TEXT_MUTED
+                                            Palette::TEXT_MUTED()
                                         },
                                     ),
                                 )
@@ -52,7 +52,7 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             if ui
                                 .small_button(
-                                    RichText::new("Clear").size(11.0).color(Palette::TEXT_DIM),
+                                    RichText::new("Clear").size(11.0).color(Palette::TEXT_DIM()),
                                 )
                                 .clicked()
                             {
@@ -70,7 +70,7 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                 .show_separator_line(false)
                 .frame(
                     Frame::NONE
-                        .fill(Palette::BG_SIDEBAR)
+                        .fill(Palette::BG_SIDEBAR())
                         .inner_margin(Margin {
                             left: 12,
                             right: 10,
@@ -81,8 +81,8 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                 .show_inside(ui, |ui| {
                     let avail_w = ui.available_width();
                     Frame::NONE
-                        .fill(Palette::BG_INPUT)
-                        .stroke(Stroke::new(1.0, Palette::BORDER))
+                        .fill(Palette::BG_INPUT())
+                        .stroke(Stroke::new(1.0, Palette::BORDER()))
                         .corner_radius(CornerRadius::same(6))
                         .inner_margin(Margin::symmetric(8, 6))
                         .show(ui, |ui| {
@@ -113,7 +113,7 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                                 ui.menu_button(
                                     RichText::new(format!("{} ▾", current_model.display_name))
                                         .size(11.5)
-                                        .color(Palette::TEXT_PRIMARY),
+                                        .color(Palette::TEXT_PRIMARY()),
                                     |ui| {
                                         ui.set_min_width(200.0);
                                         for &model_info in available_models {
@@ -137,9 +137,9 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                                             active,
                                             RichText::new(label).monospace().size(11.0).color(
                                                 if active {
-                                                    Palette::ACCENT
+                                                    Palette::ACCENT()
                                                 } else {
-                                                    Palette::TEXT_DIM
+                                                    Palette::TEXT_DIM()
                                                 },
                                             ),
                                         )
@@ -190,7 +190,7 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
             egui::CentralPanel::default()
                 .frame(
                     Frame::NONE
-                        .fill(Palette::BG_SIDEBAR)
+                        .fill(Palette::BG_SIDEBAR())
                         .inner_margin(Margin {
                             left: 12,
                             right: 6,
@@ -235,7 +235,7 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                                                         0.0,
                                                         egui::TextFormat {
                                                             font_id: mono_font,
-                                                            color: Palette::ACCENT,
+                                                            color: Palette::ACCENT(),
                                                             ..Default::default()
                                                         },
                                                     );
@@ -283,17 +283,17 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                                                 ui.painter().rect_filled(
                                                     rect,
                                                     CornerRadius::same(14),
-                                                    Color32::from_rgb(44, 45, 52),
+                                                    Palette::user_bubble_fill(),
                                                 );
                                                 ui.painter().rect_stroke(
                                                     rect,
                                                     CornerRadius::same(14),
-                                                    Stroke::new(1.0, Color32::from_rgb(64, 66, 76)),
+                                                    Stroke::new(1.0, Palette::user_bubble_border()),
                                                     egui::StrokeKind::Inside,
                                                 );
 
                                                 let text_pos = rect.min + egui::vec2(16.0, 10.0);
-                                                ui.painter().galley(text_pos, galley, Color32::from_rgb(238, 238, 242));
+                                                ui.painter().galley(text_pos, galley, Palette::TEXT_PRIMARY());
                                             });
                                         });
                                         ui.add_space(8.0);
@@ -305,13 +305,13 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                                                 RichText::new(&msg.model_label)
                                                     .size(11.0)
                                                     .strong()
-                                                    .color(Palette::ACCENT),
+                                                    .color(Palette::ACCENT()),
                                             );
                                             if state.active_agent_task.is_some() && msg.content.is_empty() {
                                                 ui.label(
                                                     RichText::new("⚡ 正在思考並分析專案中...")
                                                         .size(11.0)
-                                                        .color(Palette::AMBER),
+                                                        .color(Palette::AMBER()),
                                                 );
                                             }
                                         });
@@ -320,14 +320,14 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
 
                                         if msg.content.is_empty() && state.active_agent_task.is_some() {
                                             Frame::NONE
-                                                .fill(Palette::BG_INPUT.gamma_multiply(0.5))
+                                                .fill(Palette::BG_INPUT().gamma_multiply(0.5))
                                                 .corner_radius(CornerRadius::same(6))
                                                 .inner_margin(Margin::symmetric(10, 8))
                                                 .show(ui, |ui| {
                                                     ui.label(
                                                         RichText::new("正在讀取專案上下文並呼叫 Antigravity 模型，請稍候...")
                                                             .size(11.5)
-                                                            .color(Palette::TEXT_MUTED),
+                                                            .color(Palette::TEXT_MUTED()),
                                                     );
                                                 });
                                         } else {
