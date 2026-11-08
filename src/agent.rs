@@ -32,9 +32,16 @@ impl AgentTask {
         thread::spawn(move || {
             let mut cmd = match provider {
                 AiProvider::Gemini => {
-                    let agy_default = r"C:\Users\PC\.gemini\bin\agy.exe";
-                    let exe = if std::path::Path::new(agy_default).is_file() {
-                        agy_default.to_string()
+                    let exe = if let Ok(profile) = std::env::var("USERPROFILE") {
+                        let candidate = std::path::Path::new(&profile)
+                            .join(".gemini")
+                            .join("bin")
+                            .join("agy.exe");
+                        if candidate.is_file() {
+                            candidate.to_string_lossy().to_string()
+                        } else {
+                            "agy.exe".to_string()
+                        }
                     } else {
                         "agy.exe".to_string()
                     };

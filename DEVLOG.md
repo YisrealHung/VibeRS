@@ -69,7 +69,7 @@
 - **完成狀態**：已完成並驗證通過（RAM: `9.14 MB`，Binary: `4.8 MB`）
 - **實作內容**：
   - 新增 `src/agent.rs` 背景執行緒，使用 `mpsc::channel` 與 `AtomicBool` 建立非阻塞串流管線。
-  - 對接 Gemini (`C:\Users\PC\.gemini\bin\agy.exe -p ... --model ...`) 與 Claude CLI。
+  - 對接 Gemini (`agy.exe -p ... --model ...`) 與 Claude CLI。
   - 右側 AI 視窗支援逐行串流輸出與即時渲染（`request_repaint`）。
   - 生成期間按鈕動態切換為 `Stop ⏹`，支援隨時中斷 CLI 行程。
   - 零警告編譯通過，RAM 維持在 9MB 左右。
