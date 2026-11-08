@@ -1,7 +1,7 @@
 ﻿use crate::theme::Palette;
 use egui::{
     text::LayoutJob,
-    Color32, FontId, TextFormat,
+    FontId, TextFormat,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -284,7 +284,7 @@ pub fn highlight_code(text: &str, lang: Language) -> LayoutJob {
                     0.0,
                     TextFormat {
                         font_id: font_id.clone(),
-                        color: Color32::from_rgb(220, 160, 100),
+                        color: Palette::AMBER(),
                         ..Default::default()
                     },
                 );

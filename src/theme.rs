@@ -135,7 +135,7 @@ impl Palette {
     // Syntax colors
     pub fn syn_keyword() -> Color32 {
         if get_theme_mode() == ThemeMode::Light {
-            Color32::from_rgb(145, 35, 175)
+            Color32::from_rgb(140, 60, 20) // 咖啡色 (Coffee Brown Keyword)
         } else {
             Color32::from_rgb(198, 145, 235)
         }
@@ -159,9 +159,38 @@ impl Palette {
 
     pub fn syn_type() -> Color32 {
         if get_theme_mode() == ThemeMode::Light {
-            Color32::from_rgb(15, 110, 185)
+            Color32::from_rgb(165, 85, 35) // 淺咖啡色 / 摩卡咖啡 (Mocha Type)
         } else {
             Color32::from_rgb(120, 185, 240)
+        }
+    }
+
+    /// Highlight text color for emphasis (bold, headers, key terms)
+    /// In Dark mode: clean white. In Light mode: rich coffee brown
+    pub fn highlight_text() -> Color32 {
+        if get_theme_mode() == ThemeMode::Light {
+            Color32::from_rgb(138, 65, 25) // 咖啡色 (Coffee Brown Highlight)
+        } else {
+            Color32::WHITE
+        }
+    }
+
+    /// Inline code text color
+    /// In Dark mode: accent cyan/blue. In Light mode: rich coffee brown
+    pub fn inline_code_text() -> Color32 {
+        if get_theme_mode() == ThemeMode::Light {
+            Color32::from_rgb(148, 72, 28) // 咖啡色 (Coffee Brown Inline Code)
+        } else {
+            Self::accent()
+        }
+    }
+
+    /// Inline code background
+    pub fn inline_code_bg() -> Color32 {
+        if get_theme_mode() == ThemeMode::Light {
+            Color32::from_rgb(245, 238, 230) // 柔和拿鐵米白底 (Latte Cream BG)
+        } else {
+            Self::bg_input()
         }
     }
 

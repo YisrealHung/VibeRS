@@ -244,7 +244,7 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                                                         0.0,
                                                         egui::TextFormat {
                                                             font_id: font_id.clone(),
-                                                            color: Color32::from_rgb(238, 238, 242),
+                                                            color: Palette::TEXT_PRIMARY(),
                                                             ..Default::default()
                                                         },
                                                     );
@@ -253,7 +253,7 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                                                         0.0,
                                                         egui::TextFormat {
                                                             font_id: font_id.clone(),
-                                                            color: Color32::from_rgb(238, 238, 242),
+                                                            color: Palette::TEXT_PRIMARY(),
                                                             ..Default::default()
                                                         },
                                                     );
@@ -263,7 +263,7 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                                                         0.0,
                                                         egui::TextFormat {
                                                             font_id: font_id.clone(),
-                                                            color: Color32::from_rgb(238, 238, 242),
+                                                            color: Palette::TEXT_PRIMARY(),
                                                             ..Default::default()
                                                         },
                                                     );

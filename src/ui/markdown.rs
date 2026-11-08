@@ -1,5 +1,5 @@
 ﻿use crate::theme::Palette;
-use egui::{text::LayoutJob, Color32, CornerRadius, FontId, Frame, Margin, RichText, Stroke, TextFormat, Ui};
+use egui::{text::LayoutJob, CornerRadius, FontId, Frame, Margin, RichText, Stroke, TextFormat, Ui};
 
 /// Render beautiful Markdown blocks like Antigravity IDE
 pub fn render_markdown_message(ui: &mut Ui, markdown: &str) {
@@ -55,7 +55,7 @@ pub fn render_markdown_message(ui: &mut Ui, markdown: &str) {
         }
         if let Some(rest) = line.strip_prefix("## ") {
             ui.add_space(12.0);
-            ui.label(RichText::new(clean_markdown_inline(rest)).size(15.5).strong().color(Color32::WHITE));
+            ui.label(RichText::new(clean_markdown_inline(rest)).size(15.5).strong().color(Palette::highlight_text()));
             ui.add_space(5.0);
             continue;
         }
@@ -175,7 +175,7 @@ fn render_formatted_inline_text(ui: &mut Ui, raw: &str) {
                     0.0,
                     TextFormat {
                         font_id: normal_font.clone(),
-                        color: Color32::WHITE,
+                        color: Palette::highlight_text(),
                         ..Default::default()
                     },
                 );
@@ -186,8 +186,8 @@ fn render_formatted_inline_text(ui: &mut Ui, raw: &str) {
                     0.0,
                     TextFormat {
                         font_id: mono_font.clone(),
-                        color: Palette::ACCENT(),
-                        background: Palette::BG_INPUT(),
+                        color: Palette::inline_code_text(),
+                        background: Palette::inline_code_bg(),
                         ..Default::default()
                     },
                 );
