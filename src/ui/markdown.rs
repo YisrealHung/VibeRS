@@ -34,40 +34,41 @@ pub fn render_markdown_message(ui: &mut Ui, markdown: &str) {
 
         // 2. Horizontal divider (--- or ***)
         if trimmed == "---" || trimmed == "***" || trimmed == "___" {
-            ui.add_space(4.0);
+            ui.add_space(8.0);
             ui.separator();
-            ui.add_space(4.0);
+            ui.add_space(8.0);
             continue;
         }
 
         // 3. Headings (# H1, ## H2, ### H3, #### H4)
         if let Some(rest) = line.strip_prefix("#### ") {
-            ui.add_space(6.0);
+            ui.add_space(8.0);
             ui.label(RichText::new(clean_markdown_inline(rest)).size(13.0).strong().color(Palette::TEXT_PRIMARY));
-            ui.add_space(2.0);
+            ui.add_space(4.0);
             continue;
         }
         if let Some(rest) = line.strip_prefix("### ") {
-            ui.add_space(8.0);
+            ui.add_space(10.0);
             ui.label(RichText::new(clean_markdown_inline(rest)).size(14.0).strong().color(Palette::ACCENT));
-            ui.add_space(3.0);
+            ui.add_space(4.0);
             continue;
         }
         if let Some(rest) = line.strip_prefix("## ") {
-            ui.add_space(10.0);
+            ui.add_space(12.0);
             ui.label(RichText::new(clean_markdown_inline(rest)).size(15.5).strong().color(Color32::WHITE));
-            ui.add_space(4.0);
+            ui.add_space(5.0);
             continue;
         }
         if let Some(rest) = line.strip_prefix("# ") {
-            ui.add_space(12.0);
+            ui.add_space(14.0);
             ui.label(RichText::new(clean_markdown_inline(rest)).size(17.0).strong().color(Palette::ACCENT));
-            ui.add_space(4.0);
+            ui.add_space(6.0);
             continue;
         }
 
         // 4. Blockquotes (> ...)
         if let Some(rest) = line.strip_prefix("> ") {
+            ui.add_space(4.0);
             Frame::NONE
                 .fill(Palette::BG_INPUT.gamma_multiply(0.4))
                 .stroke(Stroke::new(1.0, Palette::BORDER))
@@ -76,7 +77,7 @@ pub fn render_markdown_message(ui: &mut Ui, markdown: &str) {
                 .show(ui, |ui| {
                     ui.label(RichText::new(clean_markdown_inline(rest)).size(12.0).color(Palette::TEXT_MUTED));
                 });
-            ui.add_space(3.0);
+            ui.add_space(4.0);
             continue;
         }
 
@@ -93,20 +94,21 @@ pub fn render_markdown_message(ui: &mut Ui, markdown: &str) {
                 (num, rest)
             };
 
+            ui.add_space(1.0);
             ui.horizontal_top(|ui| {
                 ui.label(RichText::new(bullet).monospace().size(12.0).color(Palette::ACCENT));
                 render_formatted_inline_text(ui, text);
             });
-            ui.add_space(2.0);
+            ui.add_space(3.0);
             continue;
         }
 
         // 6. Normal paragraphs
         if trimmed.is_empty() {
-            ui.add_space(4.0);
+            ui.add_space(8.0);
         } else {
             render_formatted_inline_text(ui, line);
-            ui.add_space(2.0);
+            ui.add_space(4.0);
         }
     }
 
@@ -117,25 +119,25 @@ pub fn render_markdown_message(ui: &mut Ui, markdown: &str) {
 }
 
 fn render_code_card(ui: &mut Ui, lang: &str, code: &str) {
-    ui.add_space(4.0);
+    ui.add_space(6.0);
     Frame::NONE
         .fill(Palette::BG_EDITOR)
         .stroke(Stroke::new(1.0, Palette::BORDER))
-        .corner_radius(CornerRadius::same(5))
+        .corner_radius(CornerRadius::same(6))
         .inner_margin(Margin::ZERO)
         .show(ui, |ui| {
             // Header bar
             if !lang.is_empty() {
                 Frame::NONE
                     .fill(Palette::BG_TAB_BAR)
-                    .inner_margin(Margin::symmetric(8, 3))
+                    .inner_margin(Margin::symmetric(10, 4))
                     .show(ui, |ui| {
-                        ui.label(RichText::new(lang).monospace().size(10.5).color(Palette::TEXT_DIM));
+                        ui.label(RichText::new(lang).monospace().size(11.0).color(Palette::TEXT_DIM));
                     });
             }
 
             Frame::NONE
-                .inner_margin(Margin::symmetric(10, 6))
+                .inner_margin(Margin::symmetric(12, 8))
                 .show(ui, |ui| {
                     ui.label(
                         RichText::new(code.trim_end())
@@ -144,7 +146,7 @@ fn render_code_card(ui: &mut Ui, lang: &str, code: &str) {
                     );
                 });
         });
-    ui.add_space(4.0);
+    ui.add_space(6.0);
 }
 
 /// Render inline markdown styling (bold **text**, inline `code`, etc.)

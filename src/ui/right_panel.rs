@@ -214,17 +214,28 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                             for msg in messages {
                                 match msg.role {
                                     ChatRole::User => {
+                                        ui.add_space(14.0);
                                         ui.horizontal(|ui| {
                                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
-                                                let bubble_max_w = (wrap_w * 0.88).min(wrap_w - 20.0).max(60.0);
+                                                let max_text_w = (wrap_w * 0.82).max(100.0) - 28.0;
+                                                let font_id = egui::FontId::proportional(12.5);
+                                                let galley = ui.painter().layout(
+                                                    msg.content.clone(),
+                                                    font_id,
+                                                    Palette::TEXT_PRIMARY,
+                                                    max_text_w,
+                                                );
+                                                let text_w = galley.size().x.max(40.0);
+
                                                 Frame::NONE
                                                     .fill(Palette::BG_INPUT)
                                                     .stroke(Stroke::new(1.0, Palette::BORDER))
-                                                    .corner_radius(CornerRadius::same(8))
-                                                    .inner_margin(Margin::symmetric(12, 8))
+                                                    .corner_radius(CornerRadius::same(10))
+                                                    .inner_margin(Margin::symmetric(14, 9))
                                                     .show(ui, |ui| {
                                                         ui.with_layout(egui::Layout::left_to_right(egui::Align::Min), |ui| {
-                                                            ui.set_max_width(bubble_max_w);
+                                                            ui.set_width(text_w);
+                                                            ui.set_max_width(text_w);
                                                             ui.add(
                                                                 egui::Label::new(
                                                                     RichText::new(&msg.content)
@@ -237,30 +248,33 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                                                     });
                                             });
                                         });
+                                        ui.add_space(8.0);
                                     }
                                     ChatRole::Assistant => {
-                                        ui.add_space(2.0);
+                                        ui.add_space(8.0);
                                         ui.horizontal(|ui| {
                                             ui.label(
                                                 RichText::new(&msg.model_label)
-                                                    .size(10.5)
-                                                    .color(Palette::TEXT_DIM),
+                                                    .size(11.0)
+                                                    .strong()
+                                                    .color(Palette::ACCENT),
                                             );
                                             if state.active_agent_task.is_some() && msg.content.is_empty() {
                                                 ui.label(
                                                     RichText::new("⚡ 正在思考並分析專案中...")
-                                                        .size(10.5)
-                                                        .color(Palette::ACCENT),
+                                                        .size(11.0)
+                                                        .color(Palette::AMBER),
                                                 );
                                             }
                                         });
 
+                                        ui.add_space(6.0);
+
                                         if msg.content.is_empty() && state.active_agent_task.is_some() {
-                                            ui.add_space(4.0);
                                             Frame::NONE
                                                 .fill(Palette::BG_INPUT.gamma_multiply(0.5))
-                                                .corner_radius(CornerRadius::same(4))
-                                                .inner_margin(Margin::symmetric(8, 6))
+                                                .corner_radius(CornerRadius::same(6))
+                                                .inner_margin(Margin::symmetric(10, 8))
                                                 .show(ui, |ui| {
                                                     ui.label(
                                                         RichText::new("正在讀取專案上下文並呼叫 Antigravity 模型，請稍候...")
@@ -271,9 +285,9 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                                         } else {
                                             crate::ui::markdown::render_markdown_message(ui, &msg.content);
                                         }
+                                        ui.add_space(14.0);
                                     }
                                 }
-                                ui.add_space(8.0);
                             }
                         });
                 });
