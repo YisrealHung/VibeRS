@@ -214,22 +214,29 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                             for msg in messages {
                                 match msg.role {
                                     ChatRole::User => {
-                                        Frame::NONE
-                                            .fill(Palette::BG_INPUT)
-                                            .stroke(Stroke::new(1.0, Palette::BORDER))
-                                            .corner_radius(CornerRadius::same(6))
-                                            .inner_margin(Margin::symmetric(10, 8))
-                                            .show(ui, |ui| {
-                                                ui.set_max_width((wrap_w - 22.0).max(40.0));
-                                                ui.add(
-                                                    egui::Label::new(
-                                                        RichText::new(&msg.content)
-                                                            .size(12.5)
-                                                            .color(Palette::TEXT_PRIMARY),
-                                                    )
-                                                    .wrap(),
-                                                );
+                                        ui.horizontal(|ui| {
+                                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                                                let bubble_max_w = (wrap_w * 0.88).min(wrap_w - 20.0).max(60.0);
+                                                Frame::NONE
+                                                    .fill(Palette::BG_INPUT)
+                                                    .stroke(Stroke::new(1.0, Palette::BORDER))
+                                                    .corner_radius(CornerRadius::same(8))
+                                                    .inner_margin(Margin::symmetric(12, 8))
+                                                    .show(ui, |ui| {
+                                                        ui.with_layout(egui::Layout::left_to_right(egui::Align::Min), |ui| {
+                                                            ui.set_max_width(bubble_max_w);
+                                                            ui.add(
+                                                                egui::Label::new(
+                                                                    RichText::new(&msg.content)
+                                                                        .size(12.5)
+                                                                        .color(Palette::TEXT_PRIMARY),
+                                                                )
+                                                                .wrap(),
+                                                            );
+                                                        });
+                                                    });
                                             });
+                                        });
                                     }
                                     ChatRole::Assistant => {
                                         ui.add_space(2.0);
