@@ -43,6 +43,9 @@ impl eframe::App for VibeApp {
         // inserts an extra newline on the very first Enter during candidate confirmation.
         // We filter out plain Key::Enter whenever IME is active or just committed.
         ctx.input_mut(|i| {
+            // Ensure viewport focus is active so text cursor paints and blinks continuously
+            i.focused = true;
+
             let mut has_ime_commit = false;
             let mut has_ime_preedit = false;
 

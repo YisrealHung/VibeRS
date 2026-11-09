@@ -361,6 +361,20 @@ pub fn apply_vibers_theme(ctx: &egui::Context) {
     visuals.selection.bg_fill = Palette::accent().gamma_multiply(0.25);
     visuals.selection.stroke = Stroke::new(1.0, Palette::accent());
 
+    // High-visibility blinking text cursor with hover preview
+    visuals.text_cursor.stroke = Stroke::new(
+        2.0,
+        if mode == ThemeMode::Light {
+            Color32::from_rgb(18, 18, 22)
+        } else {
+            Color32::from_rgb(255, 255, 255)
+        },
+    );
+    visuals.text_cursor.blink = true;
+    visuals.text_cursor.on_duration = 0.55;
+    visuals.text_cursor.off_duration = 0.45;
+    visuals.text_cursor.preview = true;
+
     style.visuals = visuals;
     style.spacing.item_spacing = egui::vec2(6.0, 4.0);
     style.spacing.button_padding = egui::vec2(6.0, 3.0);
