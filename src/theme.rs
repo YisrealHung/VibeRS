@@ -1,18 +1,19 @@
 use egui::{Color32, CornerRadius, FontData, FontDefinitions, FontFamily, Stroke, Style, Visuals};
 use std::sync::atomic::{AtomicU8, Ordering};
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub enum ThemeMode {
     Dark,
+    #[default]
     Light,
 }
 
-static CURRENT_THEME: AtomicU8 = AtomicU8::new(0); // 0 = Dark, 1 = Light
+static CURRENT_THEME: AtomicU8 = AtomicU8::new(1); // 0 = Dark, 1 = Light
 
 pub fn get_theme_mode() -> ThemeMode {
     match CURRENT_THEME.load(Ordering::Relaxed) {
-        1 => ThemeMode::Light,
-        _ => ThemeMode::Dark,
+        0 => ThemeMode::Dark,
+        _ => ThemeMode::Light,
     }
 }
 
@@ -251,12 +252,32 @@ pub fn configure_fonts(ctx: &egui::Context) -> String {
     let mut fonts = FontDefinitions::default();
     let mut loaded_info = Vec::new();
 
+    // Dynamically locate Windows Fonts directory across different drives/machines
+    let win_dir = std::env::var("SystemRoot")
+        .or_else(|_| std::env::var("windir"))
+        .unwrap_or_else(|_| "C:\\Windows".to_string());
+    let sys_fonts_dir = std::path::Path::new(&win_dir).join("Fonts");
+    let user_fonts_dir = std::env::var("LOCALAPPDATA")
+        .ok()
+        .map(|lad| std::path::Path::new(&lad).join("Microsoft").join("Windows").join("Fonts"));
+
+    let try_read_font = |filename: &str| -> Option<Vec<u8>> {
+        if let Some(user_dir) = &user_fonts_dir {
+            let p = user_dir.join(filename);
+            if let Ok(bytes) = std::fs::read(&p) {
+                return Some(bytes);
+            }
+        }
+        let p = sys_fonts_dir.join(filename);
+        std::fs::read(&p).ok()
+    };
+
     let mono_candidates = [
-        ("CascadiaMono", r"C:\Windows\Fonts\CascadiaMono.ttf"),
-        ("Consolas", r"C:\Windows\Fonts\consola.ttf"),
+        ("CascadiaMono", "CascadiaMono.ttf"),
+        ("Consolas", "consola.ttf"),
     ];
-    for (name, path) in mono_candidates {
-        if let Ok(bytes) = std::fs::read(path) {
+    for (name, filename) in mono_candidates {
+        if let Some(bytes) = try_read_font(filename) {
             let leaked: &'static [u8] = Box::leak(bytes.into_boxed_slice());
             fonts
                 .font_data
@@ -274,13 +295,13 @@ pub fn configure_fonts(ctx: &egui::Context) -> String {
 
     // Load both Traditional and Simplified Chinese fonts and Emoji to ensure 100% glyph coverage
     let cjk_fonts = [
-        ("MicrosoftJhengHei", r"C:\Windows\Fonts\msjh.ttc"),
-        ("MicrosoftYaHei", r"C:\Windows\Fonts\msyh.ttc"),
-        ("NotoSansTC", r"C:\Windows\Fonts\NotoSansTC-VF.ttf"),
-        ("SegoeUIEmoji", r"C:\Windows\Fonts\seguiemj.ttf"),
+        ("MicrosoftJhengHei", "msjh.ttc"),
+        ("MicrosoftYaHei", "msyh.ttc"),
+        ("NotoSansTC", "NotoSansTC-VF.ttf"),
+        ("SegoeUIEmoji", "seguiemj.ttf"),
     ];
-    for (name, path) in cjk_fonts {
-        if let Ok(bytes) = std::fs::read(path) {
+    for (name, filename) in cjk_fonts {
+        if let Some(bytes) = try_read_font(filename) {
             let leaked: &'static [u8] = Box::leak(bytes.into_boxed_slice());
             fonts
                 .font_data

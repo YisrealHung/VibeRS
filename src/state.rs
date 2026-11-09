@@ -682,57 +682,12 @@ fn detect_installed_providers() -> Vec<AiProvider> {
 }
 
 fn is_claude_installed() -> bool {
-    if find_in_path(&["claude.exe", "claude.cmd", "claude"]) {
-        return true;
-    }
-    if let Ok(profile) = std::env::var("USERPROFILE") {
-        let p = Path::new(&profile);
-        if p.join(".claude").is_dir() || p.join(".claude.json").is_file() {
-            return true;
-        }
-    }
-    if let Ok(local_app) = std::env::var("LOCALAPPDATA") {
-        let p = Path::new(&local_app);
-        if p.join("Programs").join("claude").is_dir()
-            || p.join("AnthropicClaude").is_dir()
-        {
-            return true;
-        }
-    }
-    false
+    // Only a real, runnable CLI counts (the ~/.claude folder also exists for the desktop app).
+    crate::agent::resolve_claude_exe().is_some()
 }
 
 fn is_gemini_installed() -> bool {
-    if find_in_path(&["gemini.exe", "gemini.cmd", "agy.exe", "agy.cmd", "antigravity.cmd"]) {
-        return true;
-    }
-    if let Ok(profile) = std::env::var("USERPROFILE") {
-        let p = Path::new(&profile);
-        if p.join(".gemini").is_dir() {
-            return true;
-        }
-    }
-    if let Ok(local_app) = std::env::var("LOCALAPPDATA") {
-        let p = Path::new(&local_app);
-        if p.join("Programs").join("Antigravity").is_dir() {
-            return true;
-        }
-    }
-    false
-}
-
-fn find_in_path(bins: &[&str]) -> bool {
-    let Some(path_var) = std::env::var_os("PATH") else {
-        return false;
-    };
-    for dir in std::env::split_paths(&path_var) {
-        for bin in bins {
-            if dir.join(bin).is_file() {
-                return true;
-            }
-        }
-    }
-    false
+    crate::agent::resolve_gemini_exe().is_some()
 }
 
 fn scan_directory(root: &Path, dir: &Path, depth: usize) -> Vec<TreeNode> {

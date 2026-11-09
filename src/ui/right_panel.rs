@@ -366,8 +366,12 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                                                 .corner_radius(CornerRadius::same(6))
                                                 .inner_margin(Margin::symmetric(10, 8))
                                                 .show(ui, |ui| {
+                                                    let wait_text = match state.active_provider {
+                                                        AiProvider::Claude => "正在讀取專案上下文並呼叫 Claude Code，請稍候...",
+                                                        AiProvider::Gemini => "正在讀取專案上下文並呼叫 Antigravity 模型，請稍候...",
+                                                    };
                                                     ui.label(
-                                                        RichText::new("正在讀取專案上下文並呼叫 Antigravity 模型，請稍候...")
+                                                        RichText::new(wait_text)
                                                             .size(11.5)
                                                             .color(Palette::TEXT_MUTED()),
                                                     );

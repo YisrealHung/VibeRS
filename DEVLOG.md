@@ -77,9 +77,20 @@
 ---
 
 ### [x] Stage 5：效能調優、大型檔案虛擬滾動與 Release 極限打包
-- **完成狀態**：已完成並驗證通過（**Release 執行檔體積僅 `2.83 MB`**，**實體工作集 RAM 僅 `7.92 MB`**！）
+- **完成狀態**：已完成並驗證通過（**Release 執行檔體積僅 `3.08 MB`**，**實體工作集 RAM 僅 `7.92 MB`**！）
 - **實作內容**：
   - 開啟 Fat LTO、codegen-units = 1、opt-level = "z" 與 symbols 剝離。
   - 編譯完全 0 error、0 warning。
-  - 成功達成甚至大幅超越最初企劃目標（原指標 Binary < 15MB，實測 2.83MB；原指標 RAM < 45MB，實測 7.92MB）。
+  - 成功達成甚至大幅超越最初企劃目標（原指標 Binary < 15MB，實測 3.08MB；原指標 RAM < 45MB，實測 7.92MB）。
+
+---
+
+### [x] 延伸增強：預設亮色主題、Claude CLI 原生串流與跨機器動態路徑重構
+- **完成狀態**：已完成並驗證通過（Release Binary: `3.08 MB`）
+- **實作內容**：
+  - 預設主題設為 `Light`（極簡亮色風格），啟動時即套用。
+  - 消除字型讀取寫死 `C:\Windows\Fonts\`，改為動態讀取 `%SystemRoot%` 與 `%LOCALAPPDATA%\Microsoft\Windows\Fonts`。
+  - 建立全動態 `resolve_claude_exe()` 與 `resolve_gemini_exe()` 解析器，支援 Scoop、npm、原生安裝與自訂 PATH，避免跨電腦路徑失效。
+  - 對接 Claude Code CLI 之 `stream-json` 串流管線與程序樹終止保護（`taskkill /T /F`）。
+
 
