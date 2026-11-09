@@ -142,11 +142,7 @@ pub fn render_quick_open(ctx: &egui::Context, state: &mut AppState) {
                                         RichText::new(filename)
                                             .size(12.5)
                                             .strong()
-                                            .color(if is_sel {
-                                                Color32::WHITE
-                                            } else {
-                                                Palette::TEXT_PRIMARY()
-                                            }),
+                                            .color(Palette::TEXT_PRIMARY()),
                                     );
 
                                     if !dir.is_empty() {

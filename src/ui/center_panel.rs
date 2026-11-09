@@ -484,16 +484,19 @@ fn render_tab_bar(ui: &mut egui::Ui, state: &mut AppState) {
                     let inner_resp = tab_frame.show(ui, |ui| {
                         ui.horizontal(|ui| {
                             let text_col = if is_active {
-                                Color32::WHITE
+                                Palette::TEXT_PRIMARY()
                             } else {
                                 Palette::TEXT_MUTED()
                             };
 
+                            let mut tab_label = RichText::new(&tab.name).size(12.0).color(text_col);
+                            if is_active {
+                                tab_label = tab_label.strong();
+                            }
+
                             let label_resp = ui.add(
-                                egui::Label::new(
-                                    RichText::new(&tab.name).size(12.0).color(text_col),
-                                )
-                                .sense(egui::Sense::click()),
+                                egui::Label::new(tab_label)
+                                    .sense(egui::Sense::click()),
                             );
                             if label_resp.clicked() {
                                 tab_to_activate = Some(idx);

@@ -209,16 +209,17 @@ fn render_tree_node(
 
         let row_resp = ui.horizontal(|ui| {
             ui.add_space(indent + 14.0);
-            let resp = ui.selectable_label(
-                is_selected,
-                RichText::new(&node.name).size(12.5).color(if is_selected {
-                    Color32::WHITE
-                } else if is_modified {
-                    Palette::AMBER()
-                } else {
-                    Palette::TEXT_MUTED()
-                }),
-            );
+            let mut name_text = RichText::new(&node.name).size(12.5).color(if is_selected {
+                Palette::TEXT_PRIMARY()
+            } else if is_modified {
+                Palette::AMBER()
+            } else {
+                Palette::TEXT_MUTED()
+            });
+            if is_selected {
+                name_text = name_text.strong();
+            }
+            let resp = ui.selectable_label(is_selected, name_text);
             if is_modified {
                 ui.label(RichText::new("M").size(10.5).color(Palette::AMBER()));
             }
@@ -307,7 +308,7 @@ fn render_file_modals(ctx: &egui::Context, state: &mut AppState) {
 
                     ui.add_space(8.0);
                     ui.horizontal(|ui| {
-                        let confirm = ui.button(RichText::new("建立").color(Color32::WHITE)).clicked()
+                        let confirm = ui.button(RichText::new("建立").color(Palette::TEXT_PRIMARY())).clicked()
                             || (resp.lost_focus() && ctx.input(|i| i.key_pressed(Key::Enter)));
                         let cancel = ui.button("取消").clicked()
                             || ctx.input(|i| i.key_pressed(Key::Escape));
@@ -345,7 +346,7 @@ fn render_file_modals(ctx: &egui::Context, state: &mut AppState) {
 
                     ui.add_space(8.0);
                     ui.horizontal(|ui| {
-                        let confirm = ui.button(RichText::new("建立").color(Color32::WHITE)).clicked()
+                        let confirm = ui.button(RichText::new("建立").color(Palette::TEXT_PRIMARY())).clicked()
                             || (resp.lost_focus() && ctx.input(|i| i.key_pressed(Key::Enter)));
                         let cancel = ui.button("取消").clicked()
                             || ctx.input(|i| i.key_pressed(Key::Escape));
@@ -375,7 +376,7 @@ fn render_file_modals(ctx: &egui::Context, state: &mut AppState) {
 
                     ui.add_space(8.0);
                     ui.horizontal(|ui| {
-                        let confirm = ui.button(RichText::new("確認").color(Color32::WHITE)).clicked()
+                        let confirm = ui.button(RichText::new("確認").color(Palette::TEXT_PRIMARY())).clicked()
                             || (resp.lost_focus() && ctx.input(|i| i.key_pressed(Key::Enter)));
                         let cancel = ui.button("取消").clicked()
                             || ctx.input(|i| i.key_pressed(Key::Escape));

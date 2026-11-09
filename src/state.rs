@@ -124,23 +124,28 @@ impl AiProvider {
         match self {
             AiProvider::Claude => &[
                 ModelInfo {
-                    id: "claude-sonnet-5-5-high",
-                    display_name: "Claude Sonnet 5.5 (High)",
+                    id: "sonnet",
+                    display_name: "Claude Sonnet 5.5",
                     tier: ModelTier::Reasoning,
                 },
                 ModelInfo {
-                    id: "claude-sonnet-5-5-medium",
-                    display_name: "Claude Sonnet 5.5 (Medium)",
-                    tier: ModelTier::Reasoning,
-                },
-                ModelInfo {
-                    id: "claude-opus-5-5-high",
-                    display_name: "Claude Opus 5.5 (High)",
+                    id: "opus",
+                    display_name: "Claude Opus 5.5",
                     tier: ModelTier::DeepOpus,
                 },
                 ModelInfo {
-                    id: "claude-opus-5-5-medium",
-                    display_name: "Claude Opus 5.5 (Medium)",
+                    id: "haiku",
+                    display_name: "Claude Haiku",
+                    tier: ModelTier::Fast,
+                },
+                ModelInfo {
+                    id: "sonnet-high",
+                    display_name: "Claude Sonnet 5.5 (High Effort)",
+                    tier: ModelTier::Reasoning,
+                },
+                ModelInfo {
+                    id: "opus-high",
+                    display_name: "Claude Opus 5.5 (High Effort)",
                     tier: ModelTier::DeepOpus,
                 },
             ],

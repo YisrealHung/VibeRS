@@ -32,19 +32,17 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                         let providers = state.installed_providers.clone();
                         for provider in providers {
                             let is_active = state.active_provider == provider;
-                            if ui
-                                .selectable_label(
-                                    is_active,
-                                    RichText::new(provider.tab_title()).size(12.5).color(
-                                        if is_active {
-                                            Color32::WHITE
-                                        } else {
-                                            Palette::TEXT_MUTED()
-                                        },
-                                    ),
-                                )
-                                .clicked()
-                            {
+                            let mut title_text = RichText::new(provider.tab_title()).size(12.5).color(
+                                if is_active {
+                                    Palette::TEXT_PRIMARY()
+                                } else {
+                                    Palette::TEXT_MUTED()
+                                },
+                            );
+                            if is_active {
+                                title_text = title_text.strong();
+                            }
+                            if ui.selectable_label(is_active, title_text).clicked() {
                                 state.active_provider = provider;
                             }
                         }
@@ -214,7 +212,7 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                                                 .button(
                                                     RichText::new("Send ↵")
                                                         .size(11.5)
-                                                        .color(Color32::WHITE),
+                                                        .color(Palette::TEXT_PRIMARY()),
                                                 )
                                                 .clicked()
                                                 || send_shortcut
