@@ -55,8 +55,14 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                                 .clicked()
                             {
                                 match state.active_provider {
-                                    AiProvider::Claude => state.claude_messages.clear(),
-                                    AiProvider::Gemini => state.gemini_messages.clear(),
+                                    AiProvider::Claude => {
+                                        state.claude_messages.clear();
+                                        state.claude_session_id = None;
+                                    }
+                                    AiProvider::Gemini => {
+                                        state.gemini_messages.clear();
+                                        state.gemini_conversation_id = None;
+                                    }
                                 }
                                 state.session_prompts_count = 0;
                             }

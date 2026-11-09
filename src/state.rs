@@ -278,6 +278,10 @@ pub struct AppState {
     pub active_agent_task: Option<AgentTask>,
     pub session_prompts_count: u32,
     pub model_session_counts: std::collections::HashMap<String, u32>,
+    /// Claude CLI session id; passed as `--resume` so follow-up prompts keep context.
+    pub claude_session_id: Option<String>,
+    /// Gemini (agy) conversation id; passed as `--conversation` so follow-up prompts keep context.
+    pub gemini_conversation_id: Option<String>,
 
     // System & Telemetry
     pub memory_monitor: MemoryMonitor,
@@ -329,6 +333,8 @@ impl Default for AppState {
             active_agent_task: None,
             session_prompts_count: 0,
             model_session_counts: std::collections::HashMap::new(),
+            claude_session_id: None,
+            gemini_conversation_id: None,
             memory_monitor: MemoryMonitor::default(),
             last_disk_check: std::time::Instant::now(),
             status_text: "Ready".to_string(),
@@ -370,7 +376,10 @@ impl AppState {
             .unwrap_or("workspace")
             .to_string();
         self.workspace_root = root.clone();
-        self.tree = scan_directory(&root, &root, 0);
+        // Sessions are tied to the working directory; start fresh in a new workspace.
+        self.claude_session_id = None;
+        self.gemini_conversation_id = None;
+        self.tree =scan_directory(&root, &root, 0);
         self.open_tabs.clear();
         self.active_tab_idx = 0;
 
@@ -646,12 +655,18 @@ impl AppState {
             format!("[請一律使用繁體中文（台灣）回覆。]\n\n{}", user_msg)
         };
 
+        let resume_session = match self.active_provider {
+            AiProvider::Claude => self.claude_session_id.clone(),
+            AiProvider::Gemini => self.gemini_conversation_id.clone(),
+        };
+
         // Spawn background task
         let task = AgentTask::spawn(
             self.active_provider,
             model.id,
             self.workspace_root.clone(),
             backend_prompt,
+            resume_session,
         );
         self.active_agent_task = Some(task);
     }

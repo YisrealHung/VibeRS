@@ -20,6 +20,9 @@ const GEMINI_NOT_FOUND: &str = "找不到 Antigravity (agy) CLI。請先安裝 A
 
 pub enum AgentEvent {
     Chunk(String),
+    /// CLI session or conversation id (Claude `--resume`, Gemini `--conversation`),
+    /// used so the next turn keeps conversation context.
+    SessionId(String),
     Finished,
     Error(String),
 }
@@ -203,6 +206,7 @@ impl AgentTask {
         model_id: &'static str,
         workspace_root: PathBuf,
         prompt: String,
+        resume_session: Option<String>,
     ) -> Self {
         let (tx, rx) = mpsc::channel();
         let is_running = Arc::new(AtomicBool::new(true));
@@ -213,7 +217,6 @@ impl AgentTask {
         thread::spawn(move || {
             // For Claude the prompt goes through stdin (no quoting / newline / length issues).
             let mut stdin_prompt: Option<String> = None;
-            let is_claude = provider == AiProvider::Claude;
 
             let mut cmd = match provider {
                 AiProvider::Gemini => {
@@ -229,8 +232,13 @@ impl AgentTask {
                         &prompt,
                         "--model",
                         model_id,
+                        "--output-format",
+                        "stream-json",
                         "--dangerously-skip-permissions",
                     ]);
+                    if let Some(id) = resume_session.as_deref().filter(|s| !s.is_empty()) {
+                        c.args(["--conversation", id]);
+                    }
                     c
                 }
                 AiProvider::Claude => {
@@ -242,6 +250,9 @@ impl AgentTask {
                     let (model, effort) = split_claude_model(model_id);
                     let mut c = Command::new(exe);
                     c.args(["-p", "--model", model]);
+                    if let Some(id) = resume_session.as_deref().filter(|s| !s.is_empty()) {
+                        c.args(["--resume", id]);
+                    }
                     if let Some(e) = effort {
                         c.args(["--effort", e]);
                     }
@@ -295,6 +306,7 @@ impl AgentTask {
 
             let mut output_received = false;
             let mut result_error: Option<String> = None;
+            let mut session_id_sent = false;
 
             if let Some(stdout) = child.stdout.take() {
                 let mut reader = BufReader::new(stdout);
@@ -311,10 +323,15 @@ impl AgentTask {
                     let line = decode_console_bytes(&raw);
                     let line = line.trim_end_matches(['\r', '\n']);
 
-                    if !is_claude {
-                        output_received = true;
-                        let _ = tx.send(AgentEvent::Chunk(format!("{}\n", clean_text(line))));
-                        continue;
+                    if !session_id_sent && line.starts_with('{') {
+                        if let Some(id) = json_string_after(line, "\"session_id\":\"")
+                            .or_else(|| json_string_after(line, "\"conversation_id\":\""))
+                        {
+                            if !id.is_empty() {
+                                session_id_sent = true;
+                                let _ = tx.send(AgentEvent::SessionId(id));
+                            }
+                        }
                     }
 
                     if !line.starts_with('{') {
@@ -324,7 +341,9 @@ impl AgentTask {
                             let _ = tx.send(AgentEvent::Chunk(format!("{}\n", clean_text(line))));
                         }
                     } else if let Some(idx) = line.find("\"text_delta\"") {
-                        if let Some(t) = json_string_after(&line[idx..], "\"text\":\"") {
+                        if let Some(t) = json_string_after(&line[idx..], "\"text\":\"")
+                            .or_else(|| json_string_after(&line[idx..], "\"text_delta\":\""))
+                        {
                             if !t.is_empty() {
                                 output_received = true;
                                 let _ = tx.send(AgentEvent::Chunk(clean_text(&t)));
@@ -334,13 +353,23 @@ impl AgentTask {
                         let name = json_string_after(line, "\"name\":\"").unwrap_or_default();
                         output_received = true;
                         let _ = tx.send(AgentEvent::Chunk(format!("\n`🔧 {}`\n", clean_text(&name))));
+                    } else if line.contains("\"step_type\":\"tool_call\"") {
+                        let name = json_string_after(line, "\"tool_name\":\"")
+                            .or_else(|| json_string_after(line, "\"name\":\""))
+                            .unwrap_or_default();
+                        if !name.is_empty() {
+                            output_received = true;
+                            let _ = tx.send(AgentEvent::Chunk(format!("\n`🔧 {}`\n", clean_text(&name))));
+                        }
                     } else if line.contains("\"content_block\":{\"type\":\"text\"") && output_received {
                         let _ = tx.send(AgentEvent::Chunk("\n\n".to_string()));
-                    } else if line.starts_with("{\"type\":\"result\"") {
-                        let text = json_string_after(line, "\"result\":\"").unwrap_or_default();
-                        if line.contains("\"is_error\":true") {
+                    } else if line.starts_with("{\"type\":\"result\"") || line.starts_with("{\"event\":\"result\"") {
+                        let text = json_string_after(line, "\"result\":\"")
+                            .or_else(|| json_string_after(line, "\"response\":\""))
+                            .unwrap_or_default();
+                        if line.contains("\"is_error\":true") || line.contains("\"status\":\"ERROR\"") {
                             result_error = Some(if text.is_empty() {
-                                "Claude CLI 回報錯誤（無詳細訊息）".to_string()
+                                "CLI 回報錯誤（無詳細訊息）".to_string()
                             } else {
                                 text
                             });

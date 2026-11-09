@@ -129,12 +129,32 @@ impl eframe::App for VibeApp {
             let mut finished = false;
             let mut chunks = Vec::new();
             let mut error = None;
+            let mut new_session_id = None;
 
             while let Ok(event) = task.rx.try_recv() {
                 match event {
                     crate::agent::AgentEvent::Chunk(text) => chunks.push(text),
+                    crate::agent::AgentEvent::SessionId(id) => new_session_id = Some(id),
                     crate::agent::AgentEvent::Finished => finished = true,
                     crate::agent::AgentEvent::Error(err) => error = Some(err),
+                }
+            }
+
+            if let Some(id) = new_session_id {
+                match self.state.active_provider {
+                    crate::state::AiProvider::Claude => self.state.claude_session_id = Some(id),
+                    crate::state::AiProvider::Gemini => self.state.gemini_conversation_id = Some(id),
+                }
+            }
+            // A stale/unknown session id would make every later prompt fail: start fresh next time.
+            if error.as_deref().is_some_and(|e| {
+                e.contains("No conversation found")
+                    || e.contains("conversation not found")
+                    || e.contains("Conversation not found")
+            }) {
+                match self.state.active_provider {
+                    crate::state::AiProvider::Claude => self.state.claude_session_id = None,
+                    crate::state::AiProvider::Gemini => self.state.gemini_conversation_id = None,
                 }
             }
 
