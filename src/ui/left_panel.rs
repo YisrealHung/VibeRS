@@ -1,4 +1,4 @@
-﻿use crate::state::{AppState, FileOpModal, TreeNode};
+use crate::state::{AppState, FileOpModal, TreeNode};
 use crate::theme::Palette;
 use egui::{Color32, CornerRadius, Frame, Key, Margin, RichText, Stroke};
 use std::path::PathBuf;

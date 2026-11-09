@@ -1,4 +1,4 @@
-﻿use crate::state::AppState;
+use crate::state::AppState;
 use crate::theme::Palette;
 use egui::{Color32, CornerRadius, Frame, Key, Margin, RichText, Stroke};
 
