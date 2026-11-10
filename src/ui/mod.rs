@@ -124,14 +124,28 @@ impl eframe::App for VibeApp {
             ctx.request_repaint_after(std::time::Duration::from_millis(1000));
         }
 
-        // Drain active agent task events
-        if let Some(task) = &self.state.active_agent_task {
+        // Drain active agent task events independently per provider
+        let mut any_running = false;
+        for provider in [crate::state::AiProvider::Claude, crate::state::AiProvider::Gemini] {
+            let has_task = match provider {
+                crate::state::AiProvider::Claude => self.state.claude_agent_task.is_some(),
+                crate::state::AiProvider::Gemini => self.state.gemini_agent_task.is_some(),
+            };
+            if !has_task {
+                continue;
+            }
+
             let mut finished = false;
             let mut chunks = Vec::new();
             let mut error = None;
             let mut new_session_id = None;
 
-            while let Ok(event) = task.rx.try_recv() {
+            let task_ref = match provider {
+                crate::state::AiProvider::Claude => self.state.claude_agent_task.as_ref().unwrap(),
+                crate::state::AiProvider::Gemini => self.state.gemini_agent_task.as_ref().unwrap(),
+            };
+
+            while let Ok(event) = task_ref.rx.try_recv() {
                 match event {
                     crate::agent::AgentEvent::Chunk(text) => chunks.push(text),
                     crate::agent::AgentEvent::SessionId(id) => new_session_id = Some(id),
@@ -141,24 +155,25 @@ impl eframe::App for VibeApp {
             }
 
             if let Some(id) = new_session_id {
-                match self.state.active_provider {
+                match provider {
                     crate::state::AiProvider::Claude => self.state.claude_session_id = Some(id),
                     crate::state::AiProvider::Gemini => self.state.gemini_conversation_id = Some(id),
                 }
             }
+
             // A stale/unknown session id would make every later prompt fail: start fresh next time.
             if error.as_deref().is_some_and(|e| {
                 e.contains("No conversation found")
                     || e.contains("conversation not found")
                     || e.contains("Conversation not found")
             }) {
-                match self.state.active_provider {
+                match provider {
                     crate::state::AiProvider::Claude => self.state.claude_session_id = None,
                     crate::state::AiProvider::Gemini => self.state.gemini_conversation_id = None,
                 }
             }
 
-            let list = match self.state.active_provider {
+            let list = match provider {
                 crate::state::AiProvider::Claude => &mut self.state.claude_messages,
                 crate::state::AiProvider::Gemini => &mut self.state.gemini_messages,
             };
@@ -174,10 +189,17 @@ impl eframe::App for VibeApp {
             }
 
             if finished {
-                self.state.active_agent_task = None;
+                match provider {
+                    crate::state::AiProvider::Claude => self.state.claude_agent_task = None,
+                    crate::state::AiProvider::Gemini => self.state.gemini_agent_task = None,
+                }
             } else {
-                ctx.request_repaint();
+                any_running = true;
             }
+        }
+
+        if any_running {
+            ctx.request_repaint();
         }
 
         // Ctrl+P for Quick Open

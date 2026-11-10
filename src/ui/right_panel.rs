@@ -32,9 +32,17 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                         let providers = state.installed_providers.clone();
                         for provider in providers {
                             let is_active = state.active_provider == provider;
-                            let mut title_text = RichText::new(provider.tab_title()).size(12.5).color(
+                            let is_running = state.is_task_running(provider);
+                            let title_string = if is_running {
+                                format!("{} ⚡", provider.tab_title())
+                            } else {
+                                provider.tab_title().to_string()
+                            };
+                            let mut title_text = RichText::new(title_string).size(12.5).color(
                                 if is_active {
                                     Palette::TEXT_PRIMARY()
+                                } else if is_running {
+                                    Palette::AMBER()
                                 } else {
                                     Palette::TEXT_MUTED()
                                 },
@@ -54,22 +62,13 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                                 )
                                 .clicked()
                             {
-                                match state.active_provider {
-                                    AiProvider::Claude => {
-                                        state.claude_messages.clear();
-                                        state.claude_session_id = None;
-                                    }
-                                    AiProvider::Gemini => {
-                                        state.gemini_messages.clear();
-                                        state.gemini_conversation_id = None;
-                                    }
-                                }
-                                state.session_prompts_count = 0;
+                                state.clear_active_session();
                             }
 
-                            if state.session_prompts_count > 0 {
+                            let count = state.active_prompts_count();
+                            if count > 0 {
                                 ui.label(
-                                    RichText::new(format!("會話: {} 次", state.session_prompts_count))
+                                    RichText::new(format!("會話: {} 次", count))
                                         .size(11.0)
                                         .color(Palette::TEXT_DIM()),
                                 );
@@ -102,8 +101,12 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                             let inner_w = (avail_w - 18.0).max(60.0);
                             ui.set_max_width(inner_w);
 
+                            let prompt_ref = match state.active_provider {
+                                AiProvider::Claude => &mut state.claude_prompt_input,
+                                AiProvider::Gemini => &mut state.gemini_prompt_input,
+                            };
                             let resp = ui.add(
-                                egui::TextEdit::multiline(&mut state.prompt_input)
+                                egui::TextEdit::multiline(prompt_ref)
                                     .frame(false)
                                     .hint_text("輸入指令或問題 (Ctrl+Enter 發送)...")
                                     .desired_rows(2)
@@ -199,7 +202,7 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                                 ui.with_layout(
                                     egui::Layout::right_to_left(egui::Align::Center),
                                     |ui| {
-                                        let is_busy = state.active_agent_task.is_some();
+                                        let is_busy = state.active_task_is_running();
                                         if is_busy {
                                             if ui
                                                 .button(
@@ -209,9 +212,7 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                                                 )
                                                 .clicked()
                                             {
-                                                if let Some(task) = state.active_agent_task.take() {
-                                                    task.abort();
-                                                }
+                                                state.abort_active_task();
                                             }
                                         } else {
                                             if ui
@@ -246,7 +247,10 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                 )
                 .show_inside(ui, |ui| {
                     egui::ScrollArea::vertical()
-                        .id_salt("ai_chat_scroll")
+                        .id_salt(match state.active_provider {
+                            AiProvider::Claude => "ai_chat_scroll_claude",
+                            AiProvider::Gemini => "ai_chat_scroll_gemini",
+                        })
                         .auto_shrink([false, false])
                         .stick_to_bottom(true)
                         .show(ui, |ui| {
@@ -346,6 +350,7 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                                     }
                                     ChatRole::Assistant => {
                                         ui.add_space(8.0);
+                                        let is_provider_busy = state.is_task_running(state.active_provider);
                                         ui.horizontal(|ui| {
                                             ui.label(
                                                 RichText::new(&msg.model_label)
@@ -353,7 +358,7 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
                                                     .strong()
                                                     .color(Palette::ACCENT()),
                                             );
-                                            if state.active_agent_task.is_some() && msg.content.is_empty() {
+                                            if is_provider_busy && msg.content.is_empty() {
                                                 ui.label(
                                                     RichText::new("⚡ 正在思考並分析專案中...")
                                                         .size(11.0)
@@ -364,7 +369,7 @@ pub fn render_right_panel(ctx: &egui::Context, state: &mut AppState) {
 
                                         ui.add_space(6.0);
 
-                                        if msg.content.is_empty() && state.active_agent_task.is_some() {
+                                        if msg.content.is_empty() && is_provider_busy {
                                             Frame::NONE
                                                 .fill(Palette::BG_INPUT().gamma_multiply(0.5))
                                                 .corner_radius(CornerRadius::same(6))

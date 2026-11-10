@@ -123,30 +123,42 @@ impl AiProvider {
     pub fn models(self) -> &'static [ModelInfo] {
         match self {
             AiProvider::Claude => &[
+                // Effort levels map to `claude --effort <low|medium|high>`
+                // (see `split_claude_model` in agent.rs).
                 ModelInfo {
-                    id: "sonnet",
-                    display_name: "Claude Sonnet 5.5",
+                    id: "sonnet-high",
+                    display_name: "Claude Sonnet 5.5 (High)",
                     tier: ModelTier::Reasoning,
                 },
                 ModelInfo {
-                    id: "opus",
-                    display_name: "Claude Opus 5.5",
+                    id: "sonnet-medium",
+                    display_name: "Claude Sonnet 5.5 (Medium)",
+                    tier: ModelTier::Reasoning,
+                },
+                ModelInfo {
+                    id: "sonnet-low",
+                    display_name: "Claude Sonnet 5.5 (Low)",
+                    tier: ModelTier::Reasoning,
+                },
+                ModelInfo {
+                    id: "opus-high",
+                    display_name: "Claude Opus 5.5 (High)",
+                    tier: ModelTier::DeepOpus,
+                },
+                ModelInfo {
+                    id: "opus-medium",
+                    display_name: "Claude Opus 5.5 (Medium)",
+                    tier: ModelTier::DeepOpus,
+                },
+                ModelInfo {
+                    id: "opus-low",
+                    display_name: "Claude Opus 5.5 (Low)",
                     tier: ModelTier::DeepOpus,
                 },
                 ModelInfo {
                     id: "haiku",
                     display_name: "Claude Haiku",
                     tier: ModelTier::Fast,
-                },
-                ModelInfo {
-                    id: "sonnet-high",
-                    display_name: "Claude Sonnet 5.5 (High Effort)",
-                    tier: ModelTier::Reasoning,
-                },
-                ModelInfo {
-                    id: "opus-high",
-                    display_name: "Claude Opus 5.5 (High Effort)",
-                    tier: ModelTier::DeepOpus,
                 },
             ],
             // Exactly matches `agy models` (Antigravity IDE official model roster)!
@@ -272,11 +284,14 @@ pub struct AppState {
     pub selected_claude_model: ModelInfo,
     pub selected_gemini_model: ModelInfo,
     pub attach_active_file: bool,
-    pub prompt_input: String,
+    pub claude_prompt_input: String,
+    pub gemini_prompt_input: String,
     pub claude_messages: Vec<ChatMessage>,
     pub gemini_messages: Vec<ChatMessage>,
-    pub active_agent_task: Option<AgentTask>,
-    pub session_prompts_count: u32,
+    pub claude_agent_task: Option<AgentTask>,
+    pub gemini_agent_task: Option<AgentTask>,
+    pub claude_prompts_count: u32,
+    pub gemini_prompts_count: u32,
     pub model_session_counts: std::collections::HashMap<String, u32>,
     /// Claude CLI session id; passed as `--resume` so follow-up prompts keep context.
     pub claude_session_id: Option<String>,
@@ -319,7 +334,8 @@ impl Default for AppState {
             selected_claude_model: default_claude_model,
             selected_gemini_model: default_gemini_model,
             attach_active_file: true,
-            prompt_input: String::new(),
+            claude_prompt_input: String::new(),
+            gemini_prompt_input: String::new(),
             claude_messages: vec![ChatMessage {
                 role: ChatRole::Assistant,
                 model_label: default_claude_model.display_name.to_string(),
@@ -330,8 +346,10 @@ impl Default for AppState {
                 model_label: default_gemini_model.display_name.to_string(),
                 content: "Gemini (Antigravity) 已就緒。".to_string(),
             }],
-            active_agent_task: None,
-            session_prompts_count: 0,
+            claude_agent_task: None,
+            gemini_agent_task: None,
+            claude_prompts_count: 0,
+            gemini_prompts_count: 0,
             model_session_counts: std::collections::HashMap::new(),
             claude_session_id: None,
             gemini_conversation_id: None,
@@ -369,6 +387,49 @@ impl AppState {
         self.model_session_counts.get(model_id).copied().unwrap_or(0)
     }
 
+    pub fn is_task_running(&self, provider: AiProvider) -> bool {
+        match provider {
+            AiProvider::Claude => self.claude_agent_task.is_some(),
+            AiProvider::Gemini => self.gemini_agent_task.is_some(),
+        }
+    }
+
+    pub fn active_task_is_running(&self) -> bool {
+        self.is_task_running(self.active_provider)
+    }
+
+    pub fn abort_active_task(&mut self) {
+        let task = match self.active_provider {
+            AiProvider::Claude => self.claude_agent_task.take(),
+            AiProvider::Gemini => self.gemini_agent_task.take(),
+        };
+        if let Some(t) = task {
+            t.abort();
+        }
+    }
+
+    pub fn active_prompts_count(&self) -> u32 {
+        match self.active_provider {
+            AiProvider::Claude => self.claude_prompts_count,
+            AiProvider::Gemini => self.gemini_prompts_count,
+        }
+    }
+
+    pub fn clear_active_session(&mut self) {
+        match self.active_provider {
+            AiProvider::Claude => {
+                self.claude_messages.clear();
+                self.claude_session_id = None;
+                self.claude_prompts_count = 0;
+            }
+            AiProvider::Gemini => {
+                self.gemini_messages.clear();
+                self.gemini_conversation_id = None;
+                self.gemini_prompts_count = 0;
+            }
+        }
+    }
+
     pub fn switch_workspace(&mut self, root: PathBuf) {
         self.workspace_name = root
             .file_name()
@@ -379,6 +440,14 @@ impl AppState {
         // Sessions are tied to the working directory; start fresh in a new workspace.
         self.claude_session_id = None;
         self.gemini_conversation_id = None;
+        self.claude_prompts_count = 0;
+        self.gemini_prompts_count = 0;
+        if let Some(task) = self.claude_agent_task.take() {
+            task.abort();
+        }
+        if let Some(task) = self.gemini_agent_task.take() {
+            task.abort();
+        }
         self.tree =scan_directory(&root, &root, 0);
         self.open_tabs.clear();
         self.active_tab_idx = 0;
@@ -603,11 +672,15 @@ impl AppState {
     }
 
     pub fn send_prompt(&mut self) {
-        let text = self.prompt_input.trim().to_string();
+        let prompt_input = match self.active_provider {
+            AiProvider::Claude => &mut self.claude_prompt_input,
+            AiProvider::Gemini => &mut self.gemini_prompt_input,
+        };
+        let text = prompt_input.trim().to_string();
         if text.is_empty() {
             return;
         }
-        self.prompt_input.clear();
+        prompt_input.clear();
 
         let context_prefix = if self.attach_active_file {
             if let Some(tab) = self.active_tab() {
@@ -623,7 +696,10 @@ impl AppState {
         let model = self.current_model();
 
         // Track session request counts
-        self.session_prompts_count += 1;
+        match self.active_provider {
+            AiProvider::Claude => self.claude_prompts_count += 1,
+            AiProvider::Gemini => self.gemini_prompts_count += 1,
+        }
         *self.model_session_counts.entry(model.id.to_string()).or_insert(0) += 1;
 
         let list = match self.active_provider {
@@ -668,7 +744,10 @@ impl AppState {
             backend_prompt,
             resume_session,
         );
-        self.active_agent_task = Some(task);
+        match self.active_provider {
+            AiProvider::Claude => self.claude_agent_task = Some(task),
+            AiProvider::Gemini => self.gemini_agent_task = Some(task),
+        }
     }
 }
 
